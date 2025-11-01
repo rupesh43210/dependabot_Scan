@@ -35,9 +35,12 @@ security-vuln-scanner/
 ├── vulnerability_scanner.py      # Core vulnerability scanning engine
 ├── security_report_generator.py  # Professional report generation
 ├── security_pipeline.py          # Complete end-to-end pipeline
-├── config_utils.py              # Configuration and utilities
-├── setup_and_test.py            # Environment setup and testing
-├── requirements.txt              # Optimized dependencies
+├── setup_env.py                  # Interactive environment setup
+├── requirements.txt              # Python dependencies
+├── .env.sample                   # Environment configuration template
+├── .gitignore                    # Git ignore rules
+└── README.md                     # Documentation
+```
 ├── .env                         # Environment configuration (create from template)
 ├── reports/                     # Generated reports directory
 ├── logs/                        # Application logs
@@ -79,14 +82,43 @@ GITHUB_BASE_URL=https://github.boschdevcloud.com
 
 ## 🎯 Usage
 
-### Complete Security Assessment
-Run the full pipeline for comprehensive assessment:
+### Automated Setup & Execution
+The pipeline automatically handles virtual environment creation and dependency installation:
 
 ```bash
+# Simply run the pipeline - it will auto-setup everything needed
 python security_pipeline.py
 ```
 
-This will:
+**What happens automatically:**
+1. 🔍 Checks if virtual environment exists
+2. 📦 Creates `venv/` directory if missing
+3. 📋 Installs all dependencies from `requirements.txt`
+4. 🔄 Activates virtual environment
+5. 🚀 Runs the complete security assessment
+
+### Manual Setup (Optional)
+If you prefer manual control:
+
+```bash
+# Create virtual environment manually
+python -m venv venv
+
+# Activate virtual environment
+# Windows:
+venv\Scripts\activate
+# Linux/Mac:
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run pipeline
+python security_pipeline.py
+```
+
+### What the Pipeline Does
+The security assessment performs:
 1. Scan all repositories in your organization
 2. Extract Dependabot security alerts
 3. Generate executive summary and detailed reports
@@ -521,7 +553,7 @@ This project provides a generic security vulnerability scanning pipeline for any
 ## 🏷️ Version History
 
 ### v2.0.0 (Current) - November 2025
-- ✅ Complete code optimization and cleanup (67% file reduction)
+- ✅ Complete code optimization and cleanup (75% file reduction to 7 core files)
 - ✅ Modular architecture with separated concerns
 - ✅ Enhanced vulnerability lifecycle tracking with resolution dates
 - ✅ Professional Excel formatting with conditional coloring

@@ -34,26 +34,55 @@ from pathlib import Path
 from typing import Optional
 from dotenv import load_dotenv
 
-# Check if virtual environment is activated, if not try to activate it
+# Check if virtual environment is activated, if not create and activate it
 def ensure_venv():
-    """Ensure virtual environment is activated."""
+    """Ensure virtual environment is activated, create if it doesn't exist."""
     if not hasattr(sys, 'real_prefix') and not (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix):
         # Not in virtual environment
         venv_path = Path(__file__).parent / "venv"
-        if venv_path.exists():
-            if os.name == 'nt':  # Windows
-                activate_script = venv_path / "Scripts" / "python.exe"
-                if activate_script.exists():
-                    print("🔄 Virtual environment not active. Restarting with venv...")
-                    subprocess.run([str(activate_script), __file__] + sys.argv[1:])
-                    sys.exit(0)
-            else:  # Unix/Linux
-                activate_script = venv_path / "bin" / "python"
-                if activate_script.exists():
-                    print("🔄 Virtual environment not active. Restarting with venv...")
-                    subprocess.run([str(activate_script), __file__] + sys.argv[1:])
-                    sys.exit(0)
-        print("⚠️ Virtual environment not found or not properly set up")
+        
+        if not venv_path.exists():
+            print("📦 Virtual environment not found. Creating new venv...")
+            try:
+                # Create virtual environment
+                subprocess.run([sys.executable, "-m", "venv", str(venv_path)], check=True)
+                print("✅ Virtual environment created successfully")
+            except subprocess.CalledProcessError as e:
+                print(f"❌ Failed to create virtual environment: {e}")
+                print("   Please ensure Python venv module is available")
+                return False
+        
+        # Activate virtual environment
+        if os.name == 'nt':  # Windows
+            activate_script = venv_path / "Scripts" / "python.exe"
+        else:  # Unix/Linux
+            activate_script = venv_path / "bin" / "python"
+            
+        if activate_script.exists():
+            print("🔄 Activating virtual environment...")
+            
+            # Check if requirements need to be installed
+            requirements_file = Path(__file__).parent / "requirements.txt"
+            if requirements_file.exists():
+                print("📋 Installing/updating dependencies...")
+                try:
+                    subprocess.run([
+                        str(activate_script), "-m", "pip", "install", "-r", str(requirements_file)
+                    ], check=True, capture_output=True, text=True)
+                    print("✅ Dependencies installed successfully")
+                except subprocess.CalledProcessError as e:
+                    print(f"❌ Failed to install dependencies: {e}")
+                    print("   You may need to install them manually")
+            
+            # Restart script with virtual environment
+            print("🚀 Restarting script with virtual environment...")
+            subprocess.run([str(activate_script), __file__] + sys.argv[1:])
+            sys.exit(0)
+        else:
+            print("❌ Failed to find Python executable in virtual environment")
+            return False
+    
+    return True
 
 # Ensure venv is activated
 ensure_venv()

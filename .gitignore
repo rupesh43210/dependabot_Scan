@@ -1,4 +1,4 @@
-# MiDAS Security Pipeline - Git Ignore File
+# Security Vulnerability Scanner - Git Ignore File
 
 # Python
 __pycache__/
