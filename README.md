@@ -90,8 +90,8 @@ GITHUB_TOKEN=your_github_enterprise_token_here
 # Organization to scan (required)
 GITHUB_ORG=your-organization
 
-# GitHub Enterprise base URL (optional)
-GITHUB_BASE_URL=https://github.boschdevcloud.com
+# GitHub Enterprise base URL (optional, defaults to GitHub.com)
+GITHUB_ENTERPRISE_URL=https://api.github.com
 ```
 
 ## 🎯 Usage
@@ -208,7 +208,7 @@ python setup_and_test.py
 ```env
 GITHUB_TOKEN=your_token          # Required: GitHub Enterprise token
 GITHUB_ORG=your-organization    # Required: Organization name
-GITHUB_BASE_URL=https://...      # Optional: GitHub Enterprise URL
+GITHUB_ENTERPRISE_URL=https://...      # Optional: GitHub Enterprise URL
 ```
 
 ### Risk Scoring Weights
@@ -359,7 +359,7 @@ setup_logging(level="DEBUG")
 # Core Configuration
 GITHUB_TOKEN=your_token_here
 GITHUB_ORG=your-organization
-GITHUB_BASE_URL=https://github.boschdevcloud.com
+GITHUB_ENTERPRISE_URL=https://github.boschdevcloud.com
 
 # Advanced Options
 SCAN_PRIVATE_REPOS=true

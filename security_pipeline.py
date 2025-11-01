@@ -391,11 +391,15 @@ def main():
         print("Please set your GitHub Enterprise token in the .env file")
         sys.exit(1)
     
-    # Get organization name (default to MiDAS)
-    org_name = os.getenv('GITHUB_ORG', 'MiDAS')
+    # Get organization name (required)
+    org_name = os.getenv('GITHUB_ORG')
+    if not org_name:
+        print("❌ ERROR: GITHUB_ORG environment variable is required")
+        print("   Please set your GitHub organization name in .env file")
+        sys.exit(1)
     
-    # Initialize and run pipeline
-    pipeline = MiDASSecurityPipeline(github_token, org_name)
+    # Create and run pipeline
+    pipeline = SecurityPipeline(github_token, org_name)
     
     success = pipeline.run_complete_pipeline()
     
