@@ -1,14 +1,22 @@
 #!/usr/bin/env python3
 """
-MiDAS Complete Security Pipeline - Enhanced Version
+Security Pipeline - Enhanced Version
 
 Complete end-to-end security vulnerability assessment pipeline
-for GitHub Enterprise MiDAS organization with advanced analytics,
+for GitHub Enterprise organizations with advanced analytics,
 compliance reporting, and comprehensive visualizations.
 
 Features:
 - Enhanced vulnerability scanning with lifecycle tracking
-- Advanced analytics and trend analysis
+- Advanced anal    # Get organization name (required)
+    org_name = os.getenv('GITHUB_ORG')
+    if not org_name:
+        print("❌ ERROR: GITHUB_ORG environment variable is required")
+        print("   Please set your GitHub organization name in .env file")
+        sys.exit(1)
+    
+    # Create and run pipeline
+    pipeline = SecurityPipeline(github_token, org_name) and trend analysis
 - Compliance reporting (OWASP Top 10, etc.)
 - Interactive risk matrices and dashboards
 - Executive and technical reporting
@@ -54,9 +62,9 @@ from vulnerability_scanner import VulnerabilityScanner
 from security_report_generator import SecurityReportGenerator
 
 
-class MiDASSecurityPipeline:
+class SecurityPipeline:
     """
-    Complete security assessment pipeline for MiDAS organization.
+    Complete security assessment pipeline for any GitHub organization.
     
     Features:
     - End-to-end vulnerability scanning
@@ -66,7 +74,7 @@ class MiDASSecurityPipeline:
     - Executive and technical reporting
     """
     
-    def __init__(self, github_token: str, org_name: str = "MiDAS"):
+    def __init__(self, github_token: str, org_name: str):
         """
         Initialize the security pipeline.
         
@@ -295,7 +303,7 @@ class MiDASSecurityPipeline:
         Returns:
             True if pipeline completed successfully
         """
-        print("🚀 Starting MiDAS Complete Security Assessment Pipeline")
+        print("🚀 Starting Complete Security Assessment Pipeline")
         print(f"📅 Timestamp: {self.timestamp}")
         print("=" * 70)
         

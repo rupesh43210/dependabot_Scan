@@ -1,6 +1,6 @@
-# 🛡️ MiDAS Security Pipeline v2.0
+# 🛡️ Security Vulnerability Scanner v2.0
 
-A professional, enterprise-grade vulnerability assessment pipeline for GitHub Enterprise MiDAS organization. This optimized system provides comprehensive security scanning, intelligent reporting, and risk-based prioritization with advanced analytics.
+A professional, enterprise-grade vulnerability assessment pipeline for GitHub Enterprise organizations. This optimized system provides comprehensive security scanning, intelligent reporting, and risk-based prioritization with advanced analytics.
 
 ![Pipeline Status](https://img.shields.io/badge/Status-Production%20Ready-green)
 ![Python Version](https://img.shields.io/badge/Python-3.8%2B-blue)
@@ -31,10 +31,10 @@ A professional, enterprise-grade vulnerability assessment pipeline for GitHub En
 ## 📁 Project Structure
 
 ```
-midas-vuln-scrape/
+security-vuln-scanner/
 ├── vulnerability_scanner.py      # Core vulnerability scanning engine
 ├── security_report_generator.py  # Professional report generation
-├── midas_security_pipeline.py    # Complete end-to-end pipeline
+├── security_pipeline.py          # Complete end-to-end pipeline
 ├── config_utils.py              # Configuration and utilities
 ├── setup_and_test.py            # Environment setup and testing
 ├── requirements.txt              # Optimized dependencies
@@ -49,12 +49,12 @@ midas-vuln-scrape/
 ### 1. Prerequisites
 - Python 3.8 or higher
 - GitHub Enterprise access token
-- Access to MiDAS organization on github.boschdevcloud.com
+- Access to your GitHub organization
 
 ### 2. Quick Setup
 ```bash
 # Clone or download the repository
-cd midas-vuln-scrape
+cd security-vuln-scanner
 
 # Install dependencies
 pip install -r requirements.txt
@@ -70,8 +70,8 @@ Create a `.env` file with your GitHub Enterprise token:
 # GitHub Enterprise Token (required)
 GITHUB_TOKEN=your_github_enterprise_token_here
 
-# Organization to scan (optional, defaults to MiDAS)
-GITHUB_ORG=MiDAS
+# Organization to scan (required)
+GITHUB_ORG=your-organization
 
 # GitHub Enterprise base URL (optional)
 GITHUB_BASE_URL=https://github.boschdevcloud.com
@@ -83,11 +83,11 @@ GITHUB_BASE_URL=https://github.boschdevcloud.com
 Run the full pipeline for comprehensive assessment:
 
 ```bash
-python midas_security_pipeline.py
+python security_pipeline.py
 ```
 
 This will:
-1. Scan all repositories in the MiDAS organization
+1. Scan all repositories in your organization
 2. Extract Dependabot security alerts
 3. Generate executive summary and detailed reports
 4. Apply professional formatting
@@ -161,7 +161,7 @@ python setup_and_test.py
 ### Environment Variables
 ```env
 GITHUB_TOKEN=your_token          # Required: GitHub Enterprise token
-GITHUB_ORG=MiDAS                # Optional: Organization name
+GITHUB_ORG=your-organization    # Required: Organization name
 GITHUB_BASE_URL=https://...      # Optional: GitHub Enterprise URL
 ```
 
@@ -190,7 +190,7 @@ CVSS_DEFAULTS = {
 ## 📈 Monitoring & Maintenance
 
 ### Log Files
-- Application logs: `logs/midas_security_YYYYMMDD.log`
+- Application logs: `logs/security_pipeline_YYYYMMDD.log`
 - Scan statistics and error tracking
 - Performance metrics and timing
 
@@ -236,7 +236,7 @@ Your GitHub Enterprise token needs:
 ```bash
 # Windows Task Scheduler
 # Linux/Mac cron job
-0 2 * * 1 /path/to/python /path/to/midas_security_pipeline.py
+0 2 * * 1 /path/to/python /path/to/security_pipeline.py
 ```
 
 ## 🆘 Troubleshooting
@@ -312,7 +312,7 @@ setup_logging(level="DEBUG")
 ```env
 # Core Configuration
 GITHUB_TOKEN=your_token_here
-GITHUB_ORG=MiDAS
+GITHUB_ORG=your-organization
 GITHUB_BASE_URL=https://github.boschdevcloud.com
 
 # Advanced Options
@@ -403,10 +403,10 @@ SEVERITY_COLORS = {
 ### Scheduled Scanning
 ```bash
 # Linux/macOS cron example (daily at 2 AM)
-0 2 * * * cd /path/to/midas-vuln-scrape && python midas_security_pipeline.py
+0 2 * * * cd /path/to/security-vuln-scanner && python security_pipeline.py
 
 # Windows Task Scheduler
-schtasks /create /tn "MiDAS Security Scan" /tr "python midas_security_pipeline.py" /sc daily /st 02:00
+schtasks /create /tn "Security Scan" /tr "python security_pipeline.py" /sc daily /st 02:00
 ```
 
 ### Integration with CI/CD
@@ -431,8 +431,8 @@ jobs:
         run: pip install -r requirements.txt
       - name: Run security scan
         env:
-          GITHUB_TOKEN: ${{ secrets.MIDAS_GITHUB_TOKEN }}
-        run: python midas_security_pipeline.py
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python security_pipeline.py
 ```
 
 ## 🛡️ Enterprise Features
@@ -510,7 +510,7 @@ mypy *.py --ignore-missing-imports
 
 ## 📄 License & Compliance
 
-This project is developed for internal use at MiDAS organization. All rights reserved.
+This project provides a generic security vulnerability scanning pipeline for any GitHub organization. Open source under MIT license.
 
 ### Data Handling
 - **Confidentiality**: All vulnerability data is confidential
@@ -544,7 +544,7 @@ This project is developed for internal use at MiDAS organization. All rights res
 - [ ] Install dependencies: `pip install -r requirements.txt`
 - [ ] Create `.env` file with GitHub token
 - [ ] Run setup: `python setup_and_test.py`
-- [ ] Execute scan: `python midas_security_pipeline.py`
+- [ ] Execute scan: `python security_pipeline.py`
 - [ ] Review reports in `reports/` directory
 - [ ] Set up automated scheduling (optional)
 
@@ -554,6 +554,6 @@ This project is developed for internal use at MiDAS organization. All rights res
 
 ---
 
-**Contact**: For support and questions, please contact the MiDAS DevSecOps team.
+**Contact**: For support and questions, please open a GitHub issue or contact the development team.
 
 **Last Updated**: November 2025
