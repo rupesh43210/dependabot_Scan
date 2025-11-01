@@ -54,10 +54,24 @@ security-vuln-scanner/
 - GitHub Enterprise access token
 - Access to your GitHub organization
 
-### 2. Quick Setup
+### 2. Quick Setup (Automated)
 ```bash
 # Clone or download the repository
 cd security-vuln-scanner
+
+# Configure environment (interactive)
+python setup_env.py
+
+# Run pipeline (auto-creates venv and installs dependencies)
+python security_pipeline.py
+```
+
+**That's it!** The pipeline automatically:
+- Creates virtual environment if needed
+- Installs all required dependencies
+- Runs the complete security assessment
+
+### 3. Manual Setup (Advanced Users)
 
 # Install dependencies
 pip install -r requirements.txt

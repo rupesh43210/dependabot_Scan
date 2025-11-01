@@ -94,8 +94,9 @@ def create_env_file():
         
         # Next steps
         print("\n🚀 Next Steps:")
-        print("   1. Run: python security_pipeline.py")
-        print("   2. Check the reports/ directory for output")
+        print("   • The pipeline will auto-create virtual environment and install dependencies")
+        print("   • Simply run: python security_pipeline.py")
+        print("   • Check the reports/ directory for output")
         
     except Exception as e:
         print(f"❌ Error creating .env file: {e}")

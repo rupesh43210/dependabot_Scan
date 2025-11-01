@@ -64,15 +64,32 @@ def ensure_venv():
             # Check if requirements need to be installed
             requirements_file = Path(__file__).parent / "requirements.txt"
             if requirements_file.exists():
-                print("📋 Installing/updating dependencies...")
+                # Check if dependencies are already installed
                 try:
-                    subprocess.run([
-                        str(activate_script), "-m", "pip", "install", "-r", str(requirements_file)
-                    ], check=True, capture_output=True, text=True)
-                    print("✅ Dependencies installed successfully")
-                except subprocess.CalledProcessError as e:
-                    print(f"❌ Failed to install dependencies: {e}")
-                    print("   You may need to install them manually")
+                    result = subprocess.run([
+                        str(activate_script), "-c", 
+                        "import requests, pandas, github, openpyxl; print('Dependencies OK')"
+                    ], capture_output=True, text=True, timeout=10)
+                    
+                    if result.returncode != 0:
+                        print("📋 Installing/updating dependencies...")
+                        subprocess.run([
+                            str(activate_script), "-m", "pip", "install", "-r", str(requirements_file)
+                        ], check=True, capture_output=True, text=True)
+                        print("✅ Dependencies installed successfully")
+                    else:
+                        print("✅ Dependencies already satisfied")
+                        
+                except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
+                    print("📋 Installing/updating dependencies...")
+                    try:
+                        subprocess.run([
+                            str(activate_script), "-m", "pip", "install", "-r", str(requirements_file)
+                        ], check=True, capture_output=True, text=True)
+                        print("✅ Dependencies installed successfully")
+                    except subprocess.CalledProcessError as install_error:
+                        print(f"❌ Failed to install dependencies: {install_error}")
+                        print("   You may need to install them manually")
             
             # Restart script with virtual environment
             print("🚀 Restarting script with virtual environment...")
