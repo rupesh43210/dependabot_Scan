@@ -1,0 +1,17 @@
+# MiDAS Security Pipeline Requirements
+# Production-ready vulnerability assessment pipeline
+
+# Core dependencies
+requests>=2.32.0
+pandas>=2.3.0
+python-dotenv>=1.2.0
+PyGithub>=2.8.0
+
+# Excel report generation
+openpyxl>=3.1.0
+
+# Optional dependencies for enhanced features
+# Uncomment if needed:
+# matplotlib>=3.8.0    # For charts and visualizations
+# plotly>=5.17.0       # For interactive reports
+# jinja2>=3.1.0        # For HTML report templates
