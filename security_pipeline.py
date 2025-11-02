@@ -150,9 +150,17 @@ class SecurityPipeline:
         # Scan organization
         vulnerabilities = self.scanner.scan_organization(self.org_name)
         
-        if not vulnerabilities:
-            print("❌ No vulnerabilities found or scan failed")
+        # Check if scan completed (even with 0 vulnerabilities)
+        if vulnerabilities is None or self.scanner.stats['repositories_scanned'] == 0:
+            print("❌ Scan failed - no repositories could be accessed")
             return False
+        
+        if not vulnerabilities:
+            print("✅ No vulnerabilities found - all repositories are secure!")
+            # Create empty report files for consistency
+            json_file, csv_file = self.scanner.save_results([], self.timestamp)
+            self.temp_files.extend([json_file, csv_file])
+            return True
         
         # Save scan results
         json_file, csv_file = self.scanner.save_results(vulnerabilities, self.timestamp)
@@ -198,15 +206,46 @@ class SecurityPipeline:
         with open(filename, 'w') as f:
             json.dump(summary, f, indent=2)
     
-    def generate_security_reports(self) -> Optional[str]:
+    def generate_security_reports(self, has_vulnerabilities: bool = True) -> Optional[str]:
         """
         Generate comprehensive security reports with enhanced analytics.
         
+        Args:
+            has_vulnerabilities: Whether vulnerabilities were found
+            
         Returns:
             Path to generated reports directory
         """
-        print("\n📊 STEP 2: ENHANCED SECURITY REPORT GENERATION")
+        print("\n📊 STEP 2: SECURITY REPORT GENERATION")
         print("=" * 70)
+        
+        # If no vulnerabilities, create a simple success report
+        if not has_vulnerabilities:
+            print("✅ No vulnerabilities to report - creating clean bill of health report")
+            reports_dir = f"reports/security_report_{self.timestamp}"
+            Path(reports_dir).mkdir(parents=True, exist_ok=True)
+            
+            # Create a summary file
+            summary_file = Path(reports_dir) / "scan_summary.txt"
+            with open(summary_file, 'w') as f:
+                f.write("=" * 70 + "\n")
+                f.write("SECURITY SCAN SUMMARY\n")
+                f.write("=" * 70 + "\n\n")
+                f.write(f"Scan Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                f.write(f"Account: {self.org_name}\n")
+                f.write(f"Repositories Scanned: {self.scanner.stats['repositories_scanned']}\n")
+                f.write(f"Vulnerabilities Found: 0\n\n")
+                f.write("✅ STATUS: ALL CLEAR\n\n")
+                f.write("No Dependabot security alerts were found in any of your repositories.\n")
+                f.write("Your codebase appears to be secure from known dependency vulnerabilities.\n\n")
+                f.write("Recommendations:\n")
+                f.write("- Continue monitoring for new security advisories\n")
+                f.write("- Keep dependencies up to date\n")
+                f.write("- Enable Dependabot security updates if not already enabled\n")
+            
+            print(f"✅ Security summary report created: {summary_file}")
+            print(f"📁 Reports location: {reports_dir}")
+            return reports_dir
         
         # Load vulnerability data
         json_file = f"temp_vulnerabilities_{self.timestamp}.json"
@@ -358,8 +397,11 @@ class SecurityPipeline:
             if not self.run_vulnerability_scan():
                 return False
             
+            # Check if vulnerabilities were found
+            has_vulnerabilities = self.scanner.stats['vulnerabilities_found'] > 0
+            
             # Step 2: Report Generation
-            reports_dir = self.generate_security_reports()
+            reports_dir = self.generate_security_reports(has_vulnerabilities)
             
             # Step 3: Cleanup
             self.cleanup_temporary_files()
@@ -391,12 +433,26 @@ def main():
         print("Please set your GitHub Enterprise token in the .env file")
         sys.exit(1)
     
-    # Get organization name (required)
+    # Get organization/username (required)
     org_name = os.getenv('GITHUB_ORG')
+    
+    # If GITHUB_ORG is not set, try to extract username from GITHUB_URL
     if not org_name:
-        print("❌ ERROR: GITHUB_ORG environment variable is required")
-        print("   Please set your GitHub organization name in .env file")
-        sys.exit(1)
+        github_url = os.getenv('GITHUB_URL', '')
+        if github_url:
+            # Extract username from URL like https://github.com/username
+            parts = github_url.rstrip('/').split('/')
+            if len(parts) >= 4 and 'github.com' in github_url:
+                org_name = parts[-1]  # Get the last part (username/org)
+                print(f"ℹ️  Using GitHub account: {org_name}")
+            else:
+                print("❌ ERROR: Could not extract username from GITHUB_URL")
+                print("   Please set either GITHUB_ORG or a valid GITHUB_URL in .env file")
+                sys.exit(1)
+        else:
+            print("❌ ERROR: Neither GITHUB_ORG nor GITHUB_URL environment variable is set")
+            print("   Please set your GitHub organization name or profile URL in .env file")
+            sys.exit(1)
     
     # Create and run pipeline
     pipeline = SecurityPipeline(github_token, org_name)

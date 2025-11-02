@@ -1,6 +1,6 @@
-# 🛡️ Security Vulnerability Scanner v2.0
+# 🛡️ Security Vulnerability Scanner v2.1
 
-A professional, enterprise-grade vulnerability assessment pipeline for GitHub Enterprise organizations. This optimized system provides comprehensive security scanning, intelligent reporting, and risk-based prioritization with advanced analytics.
+A professional, enterprise-grade vulnerability assessment pipeline for GitHub organizations and personal accounts. This optimized system provides comprehensive security scanning, intelligent reporting, and risk-based prioritization with advanced analytics.
 
 ![Pipeline Status](https://img.shields.io/badge/Status-Production%20Ready-green)
 ![Python Version](https://img.shields.io/badge/Python-3.8%2B-blue)
@@ -10,6 +10,7 @@ A professional, enterprise-grade vulnerability assessment pipeline for GitHub En
 
 ### 🔍 Core Capabilities
 - **🔐 Complete Vulnerability Scanning**: Automated Dependabot alert extraction from all repositories
+- **👤 Personal & Enterprise Support**: Works with both personal GitHub accounts and organizations
 - **🧠 Intelligent CVSS Scoring**: Smart fallback scoring for missing CVSS values with severity-based estimates
 - **📊 Professional Reporting**: Executive summaries, detailed technical reports, and trend analysis
 - **⚡ Risk-Based Prioritization**: Automated risk scoring, ranking, and vulnerability lifecycle tracking
@@ -51,8 +52,8 @@ security-vuln-scanner/
 
 ### 1. Prerequisites
 - Python 3.8 or higher
-- GitHub Enterprise access token
-- Access to your GitHub organization
+- GitHub personal access token (with `repo` and `security_events` scopes)
+- Access to your GitHub personal account or organization
 
 ### 2. Quick Setup (Automated)
 ```bash
@@ -71,38 +72,90 @@ python security_pipeline.py
 - Installs all required dependencies
 - Runs the complete security assessment
 
-### 3. Manual Setup (Advanced Users)
+### 3. Environment Configuration
 
-# Install dependencies
-pip install -r requirements.txt
+The scanner supports both **personal GitHub accounts** and **enterprise organizations**. Create a `.env` file based on your use case:
 
-# Run setup and test
-python setup_and_test.py
+#### Option A: Personal GitHub Account
+
+```env
+# GitHub Personal Access Token (required)
+# Get yours at: https://github.com/settings/tokens
+# Required scopes: repo, security_events
+GITHUB_TOKEN=ghp_your_personal_access_token
+
+# Your GitHub profile URL (required for personal accounts)
+GITHUB_URL=https://github.com/your-username
+
+# Leave GITHUB_ORG commented out for personal accounts
+# GITHUB_ORG=
 ```
 
-### 3. Environment Configuration
-Create a `.env` file with your GitHub Enterprise token:
+#### Option B: GitHub Organization
+
+```env
+# GitHub Personal Access Token (required)
+GITHUB_TOKEN=ghp_your_personal_access_token
+
+# Organization name (required for organizations)
+GITHUB_ORG=your-organization-name
+
+# Optional: GITHUB_URL (not needed for organizations)
+# GITHUB_URL=https://github.com/your-organization
+```
+
+#### Option C: GitHub Enterprise Server
 
 ```env
 # GitHub Enterprise Token (required)
-GITHUB_TOKEN=your_github_enterprise_token_here
+GITHUB_TOKEN=your_github_enterprise_token
 
-# Organization to scan (required)
+# Organization name (required)
 GITHUB_ORG=your-organization
 
-# GitHub Enterprise base URL (optional, defaults to GitHub.com)
-GITHUB_ENTERPRISE_URL=https://api.github.com
+# GitHub Enterprise base URL (required for Enterprise)
+GITHUB_ENTERPRISE_URL=https://github.your-company.com
 ```
+
+### 4. Getting Your GitHub Token
+
+1. Go to GitHub → Settings → Developer settings → Personal access tokens
+2. Click "Generate new token" (classic)
+3. Select scopes:
+   - ✅ `repo` (Full control of private repositories)
+   - ✅ `security_events` (Read Dependabot alerts)
+4. Generate and copy the token
+5. Add it to your `.env` file
 
 ## 🎯 Usage
 
-### Automated Setup & Execution
-The pipeline automatically handles virtual environment creation and dependency installation:
+### Quick Start
 
 ```bash
 # Simply run the pipeline - it will auto-setup everything needed
 python security_pipeline.py
 ```
+
+The scanner will automatically:
+- Detect if you're using a personal account or organization
+- Scan all accessible repositories
+- Generate comprehensive security reports
+- Create a clean summary if no vulnerabilities are found
+
+### What the Pipeline Does
+
+**For Personal Accounts:**
+- Scans all repositories under your GitHub username
+- Checks for Dependabot security alerts
+- Generates reports or a "clean bill of health" summary
+
+**For Organizations:**
+- Scans all repositories in the organization
+- Aggregates security alerts across all repos
+- Provides executive summaries and detailed technical reports
+
+### Automated Setup & Execution
+The pipeline automatically handles virtual environment creation and dependency installation:
 
 **What happens automatically:**
 1. 🔍 Checks if virtual environment exists
@@ -110,6 +163,7 @@ python security_pipeline.py
 3. 📋 Installs all dependencies from `requirements.txt`
 4. 🔄 Activates virtual environment
 5. 🚀 Runs the complete security assessment
+6. 📊 Generates reports based on findings
 
 ### Manual Setup (Optional)
 If you prefer manual control:
@@ -131,14 +185,6 @@ pip install -r requirements.txt
 python security_pipeline.py
 ```
 
-### What the Pipeline Does
-The security assessment performs:
-1. Scan all repositories in your organization
-2. Extract Dependabot security alerts
-3. Generate executive summary and detailed reports
-4. Apply professional formatting
-5. Clean up temporary files
-
 ### Individual Components
 
 #### Vulnerability Scanning Only
@@ -158,24 +204,70 @@ python setup_and_test.py
 
 ## 📊 Output Reports
 
-### Executive Summary (`executive_summary.xlsx`)
+### When Vulnerabilities Are Found
+
+#### Executive Summary (`executive_summary.xlsx`)
 - **Risk-ranked repositories**: Sorted by calculated risk score
 - **Severity breakdown**: Critical, High, Medium, Low counts per repository
 - **Visual formatting**: Color-coded risk levels
 - **Summary statistics**: Total vulnerabilities and affected repositories
 
-### Detailed Technical Report (`detailed_vulnerabilities.xlsx`)
+#### Detailed Technical Report (`detailed_vulnerabilities.xlsx`)
 - **Complete vulnerability details**: CVE IDs, CVSS scores, descriptions
 - **Remediation information**: Patched versions and fix guidance
 - **Component analysis**: Affected packages and dependencies
 - **Professional formatting**: Color-coded severity levels, text wrapping
 
-### Additional Files
+#### Additional Files
 - **CSV versions**: For data analysis and importing into other tools
 - **Source data archive**: Complete raw data for audit trails
 - **Comprehensive README**: Detailed statistics and recommendations
 
-## 🎨 Key Improvements in v2.0
+### When No Vulnerabilities Are Found
+
+If your repositories have no Dependabot alerts, the scanner creates a **Clean Bill of Health Report**:
+
+```
+📁 reports/security_report_YYYYMMDD_HHMMSS/
+   └── scan_summary.txt
+```
+
+The summary includes:
+- ✅ Scan completion status
+- 📊 Number of repositories scanned
+- 🎉 Confirmation of zero vulnerabilities
+- 💡 Security best practices and recommendations
+
+**Example output:**
+```
+======================================================================
+SECURITY SCAN SUMMARY
+======================================================================
+
+Scan Date: 2025-11-02 09:33:03
+Account: your-username
+Repositories Scanned: 42
+Vulnerabilities Found: 0
+
+✅ STATUS: ALL CLEAR
+
+No Dependabot security alerts were found in any of your repositories.
+Your codebase appears to be secure from known dependency vulnerabilities.
+
+Recommendations:
+- Continue monitoring for new security advisories
+- Keep dependencies up to date
+- Enable Dependabot security updates if not already enabled
+```
+
+## 🎨 Key Improvements in v2.1
+
+### New Features
+- **👤 Personal Account Support**: Now works with individual GitHub accounts, not just organizations
+- **🔄 Flexible Configuration**: Auto-detects personal accounts vs organizations
+- **✅ Zero Vulnerability Handling**: Treats clean scans as success with positive reporting
+- **📝 Clean Bill of Health**: Generates summary reports even when no vulnerabilities are found
+- **🔍 Smart Repository Detection**: Automatically tries organization then falls back to user account
 
 ### Code Quality
 - **Modular Architecture**: Separated concerns into focused classes
@@ -195,6 +287,7 @@ python setup_and_test.py
 - **Clear Progress**: Real-time scan progress indicators
 - **Comprehensive Logging**: Detailed logs for troubleshooting
 - **Setup Automation**: Guided setup and validation
+- **Flexible Configuration**: Works with personal accounts and organizations seamlessly
 
 ### Security Enhancements
 - **Formula Escaping**: Prevents Excel formula injection
@@ -205,10 +298,115 @@ python setup_and_test.py
 ## 🔧 Configuration Options
 
 ### Environment Variables
+
+#### For Personal Accounts
 ```env
-GITHUB_TOKEN=your_token          # Required: GitHub Enterprise token
-GITHUB_ORG=your-organization    # Required: Organization name
-GITHUB_ENTERPRISE_URL=https://...      # Optional: GitHub Enterprise URL
+GITHUB_TOKEN=ghp_your_token           # Required: GitHub personal access token
+GITHUB_URL=https://github.com/username # Required: Your GitHub profile URL
+# GITHUB_ORG=                          # Optional: Leave commented for personal use
+```
+
+#### For Organizations
+```env
+GITHUB_TOKEN=ghp_your_token           # Required: GitHub personal access token
+GITHUB_ORG=your-organization          # Required: Organization name
+# GITHUB_URL=                          # Optional: Not needed for organizations
+```
+
+#### For GitHub Enterprise
+```env
+GITHUB_TOKEN=your_enterprise_token    # Required: GitHub Enterprise token
+GITHUB_ORG=your-organization          # Required: Organization name
+GITHUB_ENTERPRISE_URL=https://github.company.com  # Required: Enterprise URL
+```
+
+### Token Scopes Required
+
+Your GitHub token needs the following scopes:
+- ✅ **`repo`** - Full control of private repositories (to access repo data)
+- ✅ **`security_events`** - Read Dependabot alerts (to scan vulnerabilities)
+
+### Configuration Priority
+
+The scanner uses this priority for account detection:
+1. If `GITHUB_ORG` is set → Uses organization mode
+2. If `GITHUB_URL` is set → Extracts username and uses personal account mode
+3. Falls back to trying both organization then user account
+
+## 📝 Real-World Examples
+
+### Example 1: Scanning Your Personal Account
+
+```bash
+# 1. Create .env file
+cat > .env << EOF
+GITHUB_TOKEN=ghp_abc123xyz789...
+GITHUB_URL=https://github.com/johndoe
+EOF
+
+# 2. Run the scanner
+python security_pipeline.py
+
+# Output:
+# ℹ️  Using GitHub account: johndoe (from GITHUB_URL)
+# 🔍 Starting vulnerability scan for johndoe
+# Fetching repositories from johndoe...
+#   Not an organization, trying as user account...
+#   Found 25 repositories (user account)
+# [1/25] Processing my-awesome-project...
+# ...
+```
+
+### Example 2: Scanning an Organization
+
+```bash
+# 1. Create .env file
+cat > .env << EOF
+GITHUB_TOKEN=ghp_abc123xyz789...
+GITHUB_ORG=my-company
+EOF
+
+# 2. Run the scanner
+python security_pipeline.py
+
+# Output:
+# ℹ️  Using GitHub organization: my-company
+# 🔍 Starting vulnerability scan for my-company
+# Fetching repositories from my-company...
+# Total repositories found: 150 (organization)
+# ...
+```
+
+### Example 3: Clean Scan (No Vulnerabilities)
+
+```bash
+# When all repositories are secure:
+✅ Vulnerability scan completed: 0 vulnerabilities found
+✅ No vulnerabilities found - all repositories are secure!
+
+📊 STEP 2: SECURITY REPORT GENERATION
+✅ No vulnerabilities to report - creating clean bill of health report
+📁 Reports location: reports/security_report_20251102_093228/
+
+🎉 PIPELINE COMPLETED SUCCESSFULLY
+📊 **SECURITY POSTURE SUMMARY**
+   Total Open Vulnerabilities: 0
+```
+
+### Example 4: Scan with Vulnerabilities Found
+
+```bash
+# When vulnerabilities are detected:
+✅ Vulnerability scan completed: 15 vulnerabilities found
+
+📊 STEP 2: ENHANCED SECURITY REPORT GENERATION
+✅ Comprehensive security reports generated successfully!
+📁 Reports location: reports/security_report_20251102_143052
+
+📋 Generated Report Suite:
+  • executive_summary.xlsx - 📈 Multi-sheet executive workbook
+  • detailed_vulnerabilities.xlsx - 🔍 Complete vulnerability inventory
+  • ...
 ```
 
 ### Risk Scoring Weights
@@ -289,17 +487,73 @@ Your GitHub Enterprise token needs:
 
 ### Common Issues
 
-#### Token Authentication
+#### Token Authentication Failed
 ```
 Error: 401 Unauthorized
-Solution: Verify GITHUB_TOKEN in .env file
+Solution: Verify GITHUB_TOKEN in .env file and ensure it hasn't expired
 ```
 
 #### Missing Permissions
 ```
 Error: 403 Forbidden
-Solution: Ensure token has repo, security_events, read:org scopes
+Solution: Ensure token has 'repo' and 'security_events' scopes
+Go to: https://github.com/settings/tokens
 ```
+
+#### Account Not Found
+```
+Error: 404 {"message": "Not Found"}
+Solution: For personal accounts, verify GITHUB_URL is set correctly:
+  GITHUB_URL=https://github.com/your-actual-username
+```
+
+#### No Repositories Found
+```
+Error: ❌ No repositories found or access denied
+Solution: 
+1. Verify your token has access to the repositories
+2. Check if GITHUB_URL matches your actual username
+3. Ensure repos are not all archived or deleted
+```
+
+#### Can't Access Private Repositories
+```
+Error: Cannot access private repositories
+Solution: 
+1. Token needs 'repo' scope (not just 'public_repo')
+2. Regenerate token with proper permissions
+3. Update GITHUB_TOKEN in .env file
+```
+
+#### Module Not Found
+```
+Error: ModuleNotFoundError: No module named 'requests'
+Solution: 
+1. Activate virtual environment: source venv/bin/activate
+2. Install dependencies: pip install -r requirements.txt
+3. Or let the pipeline auto-install: python3 security_pipeline.py
+```
+
+### Testing Your Configuration
+
+Run the diagnostic test script:
+```bash
+python test_github_access.py
+```
+
+This will verify:
+- ✅ Token authentication
+- ✅ Account access
+- ✅ Repository listing
+- ✅ Dependabot alerts access
+
+### Getting Help
+
+If you encounter issues:
+1. Check the logs in `logs/` directory
+2. Verify your `.env` configuration
+3. Run the test script to diagnose connectivity
+4. Ensure your token has the required scopes
 
 #### Network Connectivity
 ```
@@ -566,7 +820,15 @@ This project provides a generic security vulnerability scanning pipeline for any
 
 ## 🏷️ Version History
 
-### v2.0.0 (Current) - November 2025
+### v2.1.0 (Current) - November 2025
+- ✅ **Personal Account Support**: Now works with individual GitHub accounts
+- ✅ **Flexible Configuration**: Auto-detects personal accounts vs organizations
+- ✅ **Smart Repository Detection**: Falls back from org to user account automatically
+- ✅ **Zero Vulnerability Handling**: Creates "Clean Bill of Health" reports
+- ✅ **Enhanced Error Messages**: Better guidance for configuration issues
+- ✅ **Improved Documentation**: Comprehensive examples and troubleshooting
+
+### v2.0.0 - November 2025
 - ✅ Complete code optimization and cleanup (75% file reduction to 7 core files)
 - ✅ Modular architecture with separated concerns
 - ✅ Enhanced vulnerability lifecycle tracking with resolution dates
@@ -583,20 +845,61 @@ This project provides a generic security vulnerability scanning pipeline for any
 
 ---
 
+## ❓ Frequently Asked Questions (FAQ)
+
+### Q: Can I use this with my personal GitHub account?
+**A:** Yes! As of v2.1, the scanner fully supports personal accounts. Just set `GITHUB_URL=https://github.com/your-username` in your `.env` file.
+
+### Q: Do I need a paid GitHub account?
+**A:** No, you can use it with a free GitHub account. However, you need to enable Dependabot alerts in your repository settings.
+
+### Q: What if I have no vulnerabilities?
+**A:** Great! The scanner will create a "Clean Bill of Health" report confirming all repositories are secure.
+
+### Q: Can I scan both public and private repositories?
+**A:** Yes, if your token has the `repo` scope, it will scan all accessible repositories (both public and private).
+
+### Q: How often should I run scans?
+**A:** We recommend:
+- **Personal accounts**: Weekly or bi-weekly
+- **Small teams**: Daily or every other day
+- **Organizations**: Daily with automated scheduling
+
+### Q: Does this work with GitHub Enterprise Server?
+**A:** Yes! Set `GITHUB_ENTERPRISE_URL` to your enterprise server URL in the `.env` file.
+
+### Q: Will this modify my repositories?
+**A:** No, the scanner is read-only. It only reads Dependabot alerts and generates reports.
+
+### Q: What's the difference between GITHUB_URL and GITHUB_ORG?
+**A:** 
+- `GITHUB_URL`: Use for personal accounts (e.g., `https://github.com/username`)
+- `GITHUB_ORG`: Use for organizations (e.g., `my-company-name`)
+
+### Q: Can I schedule automatic scans?
+**A:** Yes! Use cron (Linux/Mac) or Task Scheduler (Windows):
+```bash
+# Daily at 2 AM
+0 2 * * * cd /path/to/scanner && python3 security_pipeline.py
+```
+
+### Q: How do I know if my token has the right permissions?
+**A:** Run the test script: `python test_github_access.py` to verify your token and permissions.
+
+---
+
 ## 🎯 Quick Start Checklist
 
 - [ ] Install Python 3.8+
 - [ ] Clone/download repository
-- [ ] Install dependencies: `pip install -r requirements.txt`
-- [ ] Create `.env` file with GitHub token
-- [ ] Run setup: `python setup_and_test.py`
+- [ ] Create `.env` file (use template above for personal account or organization)
+- [ ] Get GitHub token with `repo` and `security_events` scopes
+- [ ] Run setup: `python setup_env.py` (optional, interactive)
 - [ ] Execute scan: `python security_pipeline.py`
 - [ ] Review reports in `reports/` directory
 - [ ] Set up automated scheduling (optional)
 
-**🚀 Ready to secure your organization's code? Start scanning now!**
-- Simple report generation
-- Excel formula warning fixes
+**🚀 Ready to secure your code? Start scanning now!**
 
 ---
 
