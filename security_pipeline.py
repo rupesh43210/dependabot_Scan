@@ -433,10 +433,10 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python security_pipeline.py                    # Scan all repositories
-  python security_pipeline.py scoped             # Use scoped scanning mode
-  python security_pipeline.py scoped critical    # Use specific scope
-  python security_pipeline.py --list-scopes      # List available scopes
+  python security_pipeline.py                           # Scan all repositories
+  python security_pipeline.py scoped                    # Use scoped scanning mode
+  python security_pipeline.py scoped critical           # Use specific scope
+  python security_pipeline.py --list-scopes             # List available scopes
         """
     )
     

@@ -40,6 +40,15 @@ ENV/
 # Repository Scope Configuration (contains sensitive repo lists)
 repo_scopes.json
 
+# Configuration files with sensitive data
+*_config.json
+custom_*.json
+personal_*.json
+
+# Old/backup files
+OLD_*.md
+*_backup.*
+
 # IDE
 .vscode/
 .idea/
