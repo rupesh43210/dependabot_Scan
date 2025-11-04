@@ -80,12 +80,18 @@ class SecurityReportGenerator:
         'dismissed': {'bg': 'D3D3D3', 'font': '000000'} # Light Gray
     }
     
-    def __init__(self):
-        """Initialize the enhanced report generator."""
+    def __init__(self, scoped_repositories: Optional[List[str]] = None):
+        """
+        Initialize the enhanced report generator.
+        
+        Args:
+            scoped_repositories: Optional list of repositories in scope (for including zero-vuln repos)
+        """
         self.data = None
         self.stats = {}
         self.analytics = {}
         self.trends = {}
+        self.scoped_repositories = scoped_repositories or []
     
     def load_vulnerability_data(self, data_source: str) -> bool:
         """
@@ -137,21 +143,27 @@ class SecurityReportGenerator:
         if 'vulnerability_age_days' in self.data.columns:
             vulnerability_ages = self.data[self.data['vulnerability_age_days'].notna()]['vulnerability_age_days'].tolist()
         
+        # Calculate unique repositories considering scoped repositories
+        unique_repos = self.data['repository'].nunique() if not self.data.empty else 0
+        if self.scoped_repositories:
+            # In scoped mode, count all scoped repositories (including zero-vuln ones)
+            unique_repos = len(self.scoped_repositories)
+        
         self.stats = {
             # Basic counts
             'total_vulnerabilities': len(self.data),
-            'unique_repositories': self.data['repository'].nunique(),
+            'unique_repositories': unique_repos,
             'open_vulnerabilities': len(open_vulns),
             'resolved_vulnerabilities': len(resolved_vulns),
             'fixed_vulnerabilities': len(fixed_vulns),
             'dismissed_vulnerabilities': len(dismissed_vulns),
             
-            # Severity breakdown
+            # Severity breakdown - handle both uppercase and lowercase severity values
             'severity_breakdown': self.data['severity'].value_counts().to_dict(),
-            'critical_open': len(open_vulns[open_vulns['severity'] == 'CRITICAL']),
-            'high_open': len(open_vulns[open_vulns['severity'] == 'HIGH']),
-            'medium_open': len(open_vulns[open_vulns['severity'] == 'MEDIUM']),
-            'low_open': len(open_vulns[open_vulns['severity'] == 'LOW']),
+            'critical_open': len(open_vulns[open_vulns['severity'].str.upper() == 'CRITICAL']),
+            'high_open': len(open_vulns[open_vulns['severity'].str.upper() == 'HIGH']),
+            'medium_open': len(open_vulns[open_vulns['severity'].str.upper() == 'MEDIUM']),
+            'low_open': len(open_vulns[open_vulns['severity'].str.upper() == 'LOW']),
             
             # Risk metrics
             'average_cvss': round(self.data['cvss_score'].mean(), 2) if 'cvss_score' in self.data.columns else 0,
@@ -351,11 +363,35 @@ class SecurityReportGenerator:
     def generate_repository_executive_summary(self) -> pd.DataFrame:
         """
         Generate original repository-focused executive summary report.
+        Includes all scoped repositories, even those with zero vulnerabilities.
         
         Returns:
             DataFrame with repository-based executive summary data
         """
         if self.data is None or self.data.empty:
+            # If we have scoped repositories but no vulnerability data, show all as clean
+            if self.scoped_repositories:
+                print("📊 Generating repository-focused executive summary for scoped repositories...")
+                print("⚠️  No vulnerability data found, showing all scoped repositories as clean")
+                repo_summary = []
+                for repo in self.scoped_repositories:
+                    repo_summary.append({
+                        'Repository Name': repo,
+                        'Risk Score': 0,
+                        'Total Open': 0,
+                        'Critical': 0,
+                        'High': 0,
+                        'Medium': 0,
+                        'Low': 0,
+                        'Total All Issues': 0,
+                        'Resolved Issues': 0,
+                        'Avg Resolution Days': 'N/A',
+                        'Oldest Open (Days)': 'N/A'
+                    })
+                summary_df = pd.DataFrame(repo_summary)
+                summary_df.insert(0, 'Priority Rank', range(1, len(summary_df) + 1))
+                print(f"✅ Repository executive summary generated for {len(summary_df)} repositories (all clean)")
+                return summary_df
             return pd.DataFrame()
         
         print("📊 Generating repository-focused executive summary...")
@@ -366,53 +402,83 @@ class SecurityReportGenerator:
         # Filter for open vulnerabilities only
         open_vulns = self.data[self.data['alert_state'] == 'open'].copy()
         
-        if open_vulns.empty:
-            print("⚠️  No open vulnerabilities found")
-            return pd.DataFrame()
-        
         print(f"  Debug - Found {len(open_vulns)} open vulnerabilities")
-        print(f"  Debug - Severity distribution: {open_vulns['severity'].value_counts().to_dict()}")
+        if not open_vulns.empty:
+            print(f"  Debug - Severity distribution: {open_vulns['severity'].value_counts().to_dict()}")
+        
+        # Determine which repositories to include
+        if self.scoped_repositories:
+            # Include all scoped repositories
+            repositories_to_include = self.scoped_repositories
+            print(f"  Debug - Including all {len(repositories_to_include)} scoped repositories")
+        else:
+            # Only include repositories with open vulnerabilities
+            if open_vulns.empty:
+                print("⚠️  No open vulnerabilities found")
+                return pd.DataFrame()
+            repositories_to_include = open_vulns['repository'].unique().tolist()
+            print(f"  Debug - Including {len(repositories_to_include)} repositories with vulnerabilities")
         
         # Group by repository and calculate metrics
         repo_summary = []
         
-        for repo in open_vulns['repository'].unique():
-            repo_vulns = open_vulns[open_vulns['repository'] == repo]
+        for repo in repositories_to_include:
+            repo_vulns = open_vulns[open_vulns['repository'] == repo] if not open_vulns.empty else pd.DataFrame()
             
-            # Normalize severity values to uppercase
-            repo_vulns['severity'] = repo_vulns['severity'].str.upper()
-            
-            # Count by severity
-            severity_counts = repo_vulns['severity'].value_counts()
-            
-            # Debug: Print severity counts for first few repos
-            if len(repo_summary) < 3:
-                print(f"  Debug - {repo}: severities = {severity_counts.to_dict()}")
-            
-            # Calculate risk score
-            risk_score = sum(
-                severity_counts.get(severity, 0) * weight
-                for severity, weight in self.SEVERITY_WEIGHTS.items()
-            )
-            
-            # All vulnerabilities for this repo (including closed)
-            all_repo_vulns = self.data[self.data['repository'] == repo]
-            resolved_vulns = all_repo_vulns[all_repo_vulns['alert_state'].isin(['fixed', 'dismissed'])]
-            avg_resolution_days = resolved_vulns['days_to_resolution'].mean() if 'days_to_resolution' in resolved_vulns.columns and len(resolved_vulns) > 0 else None
-            
-            repo_summary.append({
-                'Repository Name': repo,
-                'Risk Score': risk_score,
-                'Total Open': len(repo_vulns),
-                'Critical': severity_counts.get('CRITICAL', 0),
-                'High': severity_counts.get('HIGH', 0),
-                'Medium': severity_counts.get('MEDIUM', 0),
-                'Low': severity_counts.get('LOW', 0),
-                'Total All Issues': len(all_repo_vulns),
-                'Resolved Issues': len(resolved_vulns),
-                'Avg Resolution Days': round(avg_resolution_days, 1) if avg_resolution_days else 'N/A',
-                'Oldest Open (Days)': repo_vulns['vulnerability_age_days'].max() if len(repo_vulns) > 0 and 'vulnerability_age_days' in repo_vulns.columns else 'N/A'
-            })
+            if not repo_vulns.empty:
+                # Normalize severity values to uppercase
+                repo_vulns['severity'] = repo_vulns['severity'].str.upper()
+                
+                # Count by severity
+                severity_counts = repo_vulns['severity'].value_counts()
+                
+                # Debug: Print severity counts for first few repos
+                if len(repo_summary) < 3:
+                    print(f"  Debug - {repo}: severities = {severity_counts.to_dict()}")
+                
+                # Calculate risk score
+                risk_score = sum(
+                    severity_counts.get(severity, 0) * weight
+                    for severity, weight in self.SEVERITY_WEIGHTS.items()
+                )
+                
+                # All vulnerabilities for this repo (including closed)
+                all_repo_vulns = self.data[self.data['repository'] == repo]
+                resolved_vulns = all_repo_vulns[all_repo_vulns['alert_state'].isin(['fixed', 'dismissed'])]
+                avg_resolution_days = resolved_vulns['days_to_resolution'].mean() if 'days_to_resolution' in resolved_vulns.columns and len(resolved_vulns) > 0 else None
+                
+                repo_summary.append({
+                    'Repository Name': repo,
+                    'Risk Score': risk_score,
+                    'Total Open': len(repo_vulns),
+                    'Critical': severity_counts.get('CRITICAL', 0),
+                    'High': severity_counts.get('HIGH', 0),
+                    'Medium': severity_counts.get('MEDIUM', 0),
+                    'Low': severity_counts.get('LOW', 0),
+                    'Total All Issues': len(all_repo_vulns),
+                    'Resolved Issues': len(resolved_vulns),
+                    'Avg Resolution Days': round(avg_resolution_days, 1) if avg_resolution_days else 'N/A',
+                    'Oldest Open (Days)': repo_vulns['vulnerability_age_days'].max() if len(repo_vulns) > 0 and 'vulnerability_age_days' in repo_vulns.columns else 'N/A'
+                })
+            else:
+                # Repository with zero vulnerabilities
+                all_repo_vulns = self.data[self.data['repository'] == repo] if not self.data.empty else pd.DataFrame()
+                resolved_vulns = all_repo_vulns[all_repo_vulns['alert_state'].isin(['fixed', 'dismissed'])] if not all_repo_vulns.empty else pd.DataFrame()
+                avg_resolution_days = resolved_vulns['days_to_resolution'].mean() if 'days_to_resolution' in resolved_vulns.columns and len(resolved_vulns) > 0 else None
+                
+                repo_summary.append({
+                    'Repository Name': repo,
+                    'Risk Score': 0,
+                    'Total Open': 0,
+                    'Critical': 0,
+                    'High': 0,
+                    'Medium': 0,
+                    'Low': 0,
+                    'Total All Issues': len(all_repo_vulns),
+                    'Resolved Issues': len(resolved_vulns),
+                    'Avg Resolution Days': round(avg_resolution_days, 1) if avg_resolution_days else 'N/A',
+                    'Oldest Open (Days)': 'N/A'
+                })
         
         # Create DataFrame and sort by risk score
         summary_df = pd.DataFrame(repo_summary)
@@ -421,7 +487,14 @@ class SecurityReportGenerator:
         # Add priority ranking
         summary_df.insert(0, 'Priority Rank', range(1, len(summary_df) + 1))
         
+        clean_repos = len(summary_df[summary_df['Total Open'] == 0])
+        vuln_repos = len(summary_df[summary_df['Total Open'] > 0])
+        
         print(f"✅ Repository executive summary generated for {len(summary_df)} repositories")
+        if self.scoped_repositories:
+            print(f"   📊 Repositories with vulnerabilities: {vuln_repos}")
+            print(f"   ✅ Clean repositories (zero vulnerabilities): {clean_repos}")
+        
         return summary_df
 
     def generate_executive_summary(self) -> pd.DataFrame:

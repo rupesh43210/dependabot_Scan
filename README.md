@@ -409,6 +409,166 @@ python security_pipeline.py
   • ...
 ```
 
+## 🎯 Repository Scoping
+
+The scanner supports **scoped scanning** to target specific sets of repositories instead of scanning all repositories in your organization. This is particularly useful for:
+- Release-specific security assessments
+- Targeted scanning for CI/CD pipelines
+- Team-specific vulnerability management
+- Performance optimization for large organizations
+
+### Setting Up Repository Scopes
+
+#### 1. Create Scope Configuration
+Copy the sample configuration file and customize it:
+
+```bash
+# Copy sample to create your configuration
+cp repo_scopes.json.sample repo_scopes.json
+
+# Edit to add your specific repositories
+nano repo_scopes.json
+```
+
+#### 2. Scope Configuration Format
+```json
+{
+  "scopes": {
+    "critical": {
+      "description": "Critical production repositories",
+      "repositories": [
+        "payment-service",
+        "auth-service",
+        "core-api"
+      ]
+    },
+    "frontend": {
+      "description": "Frontend applications",
+      "repositories": [
+        "web-app",
+        "mobile-app",
+        "admin-dashboard"
+      ]
+    },
+    "release-v2": {
+      "description": "Repositories for Release Version 2.0",
+      "repositories": [
+        "new-feature-api",
+        "updated-ui",
+        "migration-scripts"
+      ]
+    }
+  },
+  "default_scope": "all",
+  "active_scope": "all"
+}
+```
+
+### Scanning Modes
+
+#### 1. Scan All Repositories (Default)
+```bash
+# Scans every repository in your organization
+python security_pipeline.py
+```
+
+#### 2. Scan Specific Scope
+```bash
+# Scan only repositories in the "critical" scope
+python security_pipeline.py scoped critical
+
+# Scan only repositories in the "frontend" scope
+python security_pipeline.py scoped frontend
+```
+
+#### 3. Use Active Scope
+```bash
+# Set a scope as active (persistent)
+python manage_scopes.py --set-active critical
+
+# Then scan using the active scope
+python security_pipeline.py scoped
+```
+
+### Scope Management Commands
+
+#### List Available Scopes
+```bash
+python security_pipeline.py --list-scopes
+```
+
+#### View Specific Scope Details
+```bash
+python manage_scopes.py --show critical
+```
+
+#### Manage Scope Repositories
+```bash
+# Add repository to a scope
+python manage_scopes.py --add-repo critical new-critical-service
+
+# Remove repository from a scope
+python manage_scopes.py --remove-repo critical old-service
+```
+
+### Example Scope Usage
+
+```bash
+# List all available scopes
+$ python security_pipeline.py --list-scopes
+
+📋 Available Repository Scopes:
+==================================================
+
+🎯 all
+   Description: All repositories in the organization
+   Repositories: All repositories in the organization
+
+🎯 critical (ACTIVE)
+   Description: Critical production repositories
+   Repositories (3): payment-service, auth-service, core-api
+
+🎯 frontend
+   Description: Frontend applications
+   Repositories (3): web-app, mobile-app, admin-dashboard
+
+# Scan critical repositories only
+$ python security_pipeline.py scoped critical
+
+🎯 Scoped scanning mode activated
+   Active scope: critical
+
+📋 Scope: critical
+   Description: Critical production repositories
+   Repositories (3): payment-service, auth-service, core-api
+
+📋 Repository Filtering:
+   Total repositories available: 150
+   Specific repositories requested: 3
+   Repositories to scan: 3
+   ✅ Scanning repositories: payment-service, auth-service, core-api
+```
+
+### Configuration File Security
+
+The `repo_scopes.json` file is automatically added to `.gitignore` to prevent accidental exposure of repository lists. This ensures:
+- Repository names aren't committed to version control
+- Team-specific scopes remain private
+- Sensitive repository lists are protected
+
+**Important:** Always create your `repo_scopes.json` from the sample file and never commit it to git.
+
+### Legacy Environment Variable Support
+
+For backward compatibility, the scanner still supports the `SCAN_SPECIFIC_REPOS` environment variable:
+
+```env
+# In .env file (legacy method)
+SCAN_SPECIFIC_REPOS=repo1,repo2,repo3
+```
+
+However, the scope-based approach is recommended for better organization and reusability.
+
 ### Risk Scoring Weights
 Customize risk scoring in `config_utils.py`:
 ```python

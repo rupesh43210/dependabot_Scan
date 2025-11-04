@@ -37,6 +37,9 @@ ENV/
 .env.production
 .env.staging
 
+# Repository Scope Configuration (contains sensitive repo lists)
+repo_scopes.json
+
 # IDE
 .vscode/
 .idea/

@@ -29,9 +29,10 @@ Version: 2.1.0
 import os
 import sys
 import subprocess
+import argparse
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
 from dotenv import load_dotenv
 
 # Check if virtual environment is activated, if not create and activate it
@@ -106,6 +107,7 @@ ensure_venv()
 
 from vulnerability_scanner import VulnerabilityScanner
 from security_report_generator import SecurityReportGenerator
+from repository_scope_manager import RepositoryScopeManager
 
 
 class SecurityPipeline:
@@ -120,22 +122,24 @@ class SecurityPipeline:
     - Executive and technical reporting
     """
     
-    def __init__(self, github_token: str, org_name: str):
+    def __init__(self, github_token: str, org_name: str, specific_repos: Optional[List[str]] = None):
         """
         Initialize the security pipeline.
         
         Args:
             github_token: GitHub Enterprise personal access token
             org_name: Organization name to scan
+            specific_repos: Optional list of specific repository names to scan
         """
         self.github_token = github_token
         self.org_name = org_name
+        self.specific_repos = specific_repos
         self.timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.temp_files = []
         
         # Initialize components
         self.scanner = VulnerabilityScanner(github_token)
-        self.report_generator = SecurityReportGenerator()
+        self.report_generator = SecurityReportGenerator(specific_repos)
     
     def run_vulnerability_scan(self) -> bool:
         """
@@ -147,8 +151,8 @@ class SecurityPipeline:
         print("🔍 STEP 1: VULNERABILITY SCANNING")
         print("=" * 70)
         
-        # Scan organization
-        vulnerabilities = self.scanner.scan_organization(self.org_name)
+        # Scan organization with optional repository filtering
+        vulnerabilities = self.scanner.scan_organization(self.org_name, self.specific_repos)
         
         # Check if scan completed (even with 0 vulnerabilities)
         if vulnerabilities is None or self.scanner.stats['repositories_scanned'] == 0:
@@ -423,8 +427,50 @@ class SecurityPipeline:
 
 def main():
     """Main execution function."""
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(
+        description="Security Vulnerability Scanner - Enhanced Version",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python security_pipeline.py                    # Scan all repositories
+  python security_pipeline.py scoped             # Use scoped scanning mode
+  python security_pipeline.py scoped critical    # Use specific scope
+  python security_pipeline.py --list-scopes      # List available scopes
+        """
+    )
+    
+    parser.add_argument(
+        'mode',
+        nargs='?',
+        choices=['scoped'],
+        help='Scanning mode: "scoped" to use repository scopes'
+    )
+    
+    parser.add_argument(
+        'scope',
+        nargs='?',
+        help='Specific scope to use (when mode is "scoped")'
+    )
+    
+    parser.add_argument(
+        '--list-scopes',
+        action='store_true',
+        help='List available repository scopes and exit'
+    )
+    
+    args = parser.parse_args()
+    
     # Load environment variables
     load_dotenv()
+    
+    # Initialize scope manager
+    scope_manager = RepositoryScopeManager()
+    
+    # Handle --list-scopes option
+    if args.list_scopes:
+        scope_manager.print_scope_info()
+        sys.exit(0)
     
     # Get GitHub token
     github_token = os.getenv('GITHUB_TOKEN')
@@ -454,8 +500,63 @@ def main():
             print("   Please set your GitHub organization name or profile URL in .env file")
             sys.exit(1)
     
+    # Determine scanning mode and repositories
+    specific_repos = None
+    scan_mode = "all"
+    
+    if args.mode == "scoped":
+        scan_mode = "scoped"
+        
+        # Determine which scope to use
+        scope_name = args.scope if args.scope else scope_manager.get_active_scope()
+        
+        print(f"🎯 Scoped scanning mode activated")
+        print(f"   Active scope: {scope_name}")
+        
+        # Validate scope
+        available_scopes = scope_manager.get_available_scopes()
+        if scope_name not in available_scopes:
+            print(f"❌ ERROR: Unknown scope '{scope_name}'")
+            print(f"   Available scopes: {', '.join(available_scopes)}")
+            print("   Use --list-scopes to see detailed scope information")
+            sys.exit(1)
+        
+        # Print scope information
+        scope_manager.print_scope_info(scope_name)
+        
+        # Get repositories for the scope
+        specific_repos = scope_manager.get_repositories_for_scope(scope_name)
+        
+        if specific_repos is not None and len(specific_repos) == 0:
+            print(f"❌ ERROR: Scope '{scope_name}' has no repositories defined")
+            print(f"   Please add repositories to this scope in {scope_manager.config_file}")
+            sys.exit(1)
+        
+        # Update active scope if a specific scope was provided
+        if args.scope and args.scope != scope_manager.get_active_scope():
+            scope_manager.set_active_scope(args.scope)
+            
+    else:
+        # Check for legacy environment variable support
+        specific_repos_str = os.getenv('SCAN_SPECIFIC_REPOS', '').strip()
+        if specific_repos_str:
+            specific_repos = [repo.strip() for repo in specific_repos_str.split(',') if repo.strip()]
+            print(f"🎯 Environment-based filtering enabled: {len(specific_repos)} repositories specified")
+            print(f"   Repositories: {', '.join(specific_repos)}")
+            scan_mode = "env_filtered"
+        else:
+            print("🌐 Scanning ALL repositories in the organization")
+    
+    print(f"\n📋 Scan Configuration:")
+    print(f"   Mode: {scan_mode}")
+    print(f"   Organization: {org_name}")
+    if specific_repos:
+        print(f"   Target repositories: {len(specific_repos)} specified")
+    else:
+        print(f"   Target repositories: All repositories")
+    
     # Create and run pipeline
-    pipeline = SecurityPipeline(github_token, org_name)
+    pipeline = SecurityPipeline(github_token, org_name, specific_repos)
     
     success = pipeline.run_complete_pipeline()
     

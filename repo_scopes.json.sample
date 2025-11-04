@@ -1,0 +1,53 @@
+{
+  "scopes": {
+    "critical": {
+      "description": "Critical production repositories",
+      "repositories": [
+        "example-critical-repo1",
+        "example-critical-repo2",
+        "example-production-service"
+      ]
+    },
+    "frontend": {
+      "description": "Frontend applications",
+      "repositories": [
+        "example-web-app",
+        "example-mobile-app",
+        "example-dashboard"
+      ]
+    },
+    "backend": {
+      "description": "Backend services and APIs",
+      "repositories": [
+        "example-api-service",
+        "example-auth-service",
+        "example-data-service"
+      ]
+    },
+    "infrastructure": {
+      "description": "Infrastructure and DevOps repositories",
+      "repositories": [
+        "example-terraform-configs",
+        "example-kubernetes-manifests",
+        "example-ci-cd-pipelines"
+      ]
+    },
+    "release-v1": {
+      "description": "Repositories for Release Version 1.0",
+      "repositories": [
+        "example-core-service",
+        "example-ui-component",
+        "example-integration-tests"
+      ]
+    },
+    "custom": {
+      "description": "Custom scope for specific scenarios",
+      "repositories": [
+        "example-custom-repo1",
+        "example-custom-repo2"
+      ]
+    }
+  },
+  "default_scope": "all",
+  "active_scope": "all"
+}
