@@ -312,6 +312,24 @@ python reopen_fixed.py
 - Updates GitHub Projects status from "Done" back to "In Progress"
 - Only processes issues that were created by the automation
 
+#### Update Project Status for Open Issues
+
+Ensure all open security issues have the correct project status:
+
+```bash
+# Preview what would be updated
+python update_open_issue_status.py --dry-run
+
+# Actually update project status
+python update_open_issue_status.py
+```
+
+**What it does:**
+- Scans all repositories for open security issues
+- Updates GitHub Projects status from "Done" to "In Progress" for open issues
+- Ensures project boards accurately reflect current issue state
+- Useful after manually reopening issues or fixing incorrect statuses
+
 <details>
 <summary>🔄 <strong>Issue Lifecycle Best Practices</strong></summary>
 
@@ -327,6 +345,10 @@ python close_fixed_issues.py             # Then execute
 # 3. If you notice any issues closed incorrectly, reopen them
 python reopen_fixed.py --dry-run         # Preview first
 python reopen_fixed.py                   # Then execute
+
+# 4. Update project status for all open issues
+python update_open_issue_status.py --dry-run   # Preview first
+python update_open_issue_status.py             # Then execute
 ```
 
 **Safety Features:**
