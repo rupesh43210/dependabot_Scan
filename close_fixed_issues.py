@@ -21,6 +21,7 @@ import sys
 import json
 import argparse
 import csv
+import requests
 from pathlib import Path
 from typing import Dict, List, Set, Optional
 from datetime import datetime
@@ -52,12 +53,25 @@ class IssueCloser:
         
         self.org = self.github.get_organization(org_name)
         
+        # Setup GraphQL endpoint for project updates
+        base_url = os.getenv('GITHUB_ENTERPRISE_URL', 'https://github.com')
+        if 'github.com' in base_url:
+            self.graphql_url = "https://api.github.com/graphql"
+        else:
+            self.graphql_url = f"{base_url}/api/graphql"
+        
+        self.graphql_headers = {
+            'Authorization': f'Bearer {github_token}',
+            'Content-Type': 'application/json',
+        }
+        
         # Statistics
         self.stats = {
             'repos_checked': 0,
             'open_issues_found': 0,
             'issues_closed': 0,
             'issues_skipped': 0,
+            'project_status_updated': 0,
             'errors': 0
         }
     
@@ -135,6 +149,169 @@ class IssueCloser:
         
         return vuln_ids
     
+    def update_project_status_to_done(self, issue_node_id: str) -> bool:
+        """
+        Update the issue status to 'Done' in GitHub Projects.
+        
+        Args:
+            issue_node_id: The global node ID of the issue
+            
+        Returns:
+            True if status was updated successfully
+        """
+        try:
+            # Query to get project item ID for this issue
+            query = """
+            query($nodeId: ID!) {
+              node(id: $nodeId) {
+                ... on Issue {
+                  projectItems(first: 10) {
+                    nodes {
+                      id
+                      project {
+                        title
+                        number
+                      }
+                      fieldValues(first: 20) {
+                        nodes {
+                          ... on ProjectV2ItemFieldSingleSelectValue {
+                            name
+                            field {
+                              ... on ProjectV2SingleSelectField {
+                                name
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            """
+            
+            response = requests.post(
+                self.graphql_url,
+                headers=self.graphql_headers,
+                json={'query': query, 'variables': {'nodeId': issue_node_id}}
+            )
+            
+            if response.status_code != 200:
+                return False
+            
+            data = response.json()
+            if 'errors' in data:
+                return False
+            
+            project_items = data.get('data', {}).get('node', {}).get('projectItems', {}).get('nodes', [])
+            
+            if not project_items:
+                return False  # Issue not in any project
+            
+            # For each project the issue is in, update status to Done
+            for item in project_items:
+                project_item_id = item.get('id')
+                project_info = item.get('project', {})
+                
+                if not project_item_id:
+                    continue
+                
+                # Get the project ID and status field ID
+                project_query = """
+                query($org: String!, $number: Int!) {
+                  organization(login: $org) {
+                    projectV2(number: $number) {
+                      id
+                      field(name: "Status") {
+                        ... on ProjectV2SingleSelectField {
+                          id
+                          options {
+                            id
+                            name
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+                """
+                
+                proj_response = requests.post(
+                    self.graphql_url,
+                    headers=self.graphql_headers,
+                    json={
+                        'query': project_query,
+                        'variables': {
+                            'org': self.org_name,
+                            'number': project_info.get('number')
+                        }
+                    }
+                )
+                
+                if proj_response.status_code != 200:
+                    continue
+                
+                proj_data = proj_response.json()
+                if 'errors' in proj_data:
+                    continue
+                
+                project_data = proj_data.get('data', {}).get('organization', {}).get('projectV2', {})
+                status_field = project_data.get('field', {})
+                field_id = status_field.get('id')
+                
+                # Find the "Done" option ID
+                done_option_id = None
+                for option in status_field.get('options', []):
+                    if option.get('name', '').lower() in ['done', 'closed', 'complete', 'completed']:
+                        done_option_id = option.get('id')
+                        break
+                
+                if not field_id or not done_option_id:
+                    continue
+                
+                # Update the status
+                update_mutation = """
+                mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $valueId: String!) {
+                  updateProjectV2ItemFieldValue(input: {
+                    projectId: $projectId
+                    itemId: $itemId
+                    fieldId: $fieldId
+                    value: {singleSelectOptionId: $valueId}
+                  }) {
+                    projectV2Item {
+                      id
+                    }
+                  }
+                }
+                """
+                
+                update_response = requests.post(
+                    self.graphql_url,
+                    headers=self.graphql_headers,
+                    json={
+                        'query': update_mutation,
+                        'variables': {
+                            'projectId': project_data.get('id'),
+                            'itemId': project_item_id,
+                            'fieldId': field_id,
+                            'valueId': done_option_id
+                        }
+                    }
+                )
+                
+                if update_response.status_code == 200:
+                    update_data = update_response.json()
+                    if 'errors' not in update_data:
+                        self.stats['project_status_updated'] += 1
+                        return True
+            
+            return False
+            
+        except Exception as e:
+            print(f"      ⚠️  Could not update project status: {e}")
+            return False
+    
     def is_automated_security_issue(self, issue) -> bool:
         """
         Check if the issue was created by our security automation.
@@ -209,6 +386,7 @@ class IssueCloser:
                     if self.dry_run:
                         print(f"   🔍 [DRY RUN] Would close issue #{issue.number}: {issue.title}")
                         print(f"      Fixed vulnerabilities: {len(issue_vulns)}")
+                        print(f"      Would update project status to 'Done'")
                     else:
                         # Close the issue with a comment
                         closing_comment = (
@@ -224,6 +402,12 @@ class IssueCloser:
                         
                         print(f"   ✅ Closed issue #{issue.number}: {issue.title}")
                         print(f"      Fixed vulnerabilities: {len(issue_vulns)}")
+                        
+                        # Update project status to Done
+                        if self.update_project_status_to_done(issue.node_id):
+                            print(f"      ✅ Updated project status to 'Done'")
+                        else:
+                            print(f"      ℹ️  Issue not in project or status update not needed")
                     
                     self.stats['issues_closed'] += 1
                 else:
@@ -283,6 +467,7 @@ class IssueCloser:
             print(f"Issues to close:          {self.stats['issues_closed']}")
         else:
             print(f"Issues closed:            {self.stats['issues_closed']}")
+            print(f"Project statuses updated: {self.stats['project_status_updated']}")
         
         print(f"Issues skipped:           {self.stats['issues_skipped']}")
         print(f"Errors encountered:       {self.stats['errors']}")
