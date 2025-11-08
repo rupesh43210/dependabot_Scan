@@ -273,14 +273,14 @@ class StandaloneIssueCreator:
             # Label doesn't exist, create it
             try:
                 if color is None:
-                    color = self.DEFAULT_LABEL_COLOR.lstrip('#')
+                    color = 'B60205'  # Default red color for security labels
                 else:
                     color = color.lstrip('#')
                 
                 repo.create_label(
                     name=label_name,
                     color=color,
-                    description=f"Label created by Security Issue Creator"
+                    description=f"Security vulnerability tracking"
                 )
                 
                 print(f"  ✅ Created label '{label_name}' with color #{color}")
@@ -432,7 +432,11 @@ class StandaloneIssueCreator:
             return True
             
         except Exception as e:
-            print(f"     ❌ Error creating issue for {repository_name}: {e}")
+            import traceback
+            print(f"     ❌ Error creating issue for {repository_name}")
+            print(f"        Error type: {type(e).__name__}")
+            print(f"        Error message: {str(e)}")
+            traceback.print_exc()
             self.stats['errors'] += 1
             return False
     
@@ -579,15 +583,11 @@ Examples:
     print(f"Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"Organization: {os.getenv('GITHUB_ORG', 'MiDAS')}")
     
-    # Show configuration summary if debug logging is enabled
-    if config.enable_debug_logging:
-        config.print_config_summary()
-    
     # Override config with command line arguments where provided
-    project_name = args.project or config.default_project
-    reports_dir = args.reports_dir or config.reports_directory
+    project_name = args.project or config.get('default_project', 'Security')
+    reports_dir = args.reports_dir or config.get('reports_directory', 'reports')
     
-    print(f"🎯 Project: {project_name}")
+    print(f"Project: {project_name}")
     print("=" * 70)
     
     # Initialize issue creator with configuration
@@ -616,16 +616,14 @@ Examples:
     if args.labels:
         labels = [label.strip() for label in args.labels.split(',') if label.strip()]
     else:
-        labels = config.get_label_names()
+        labels = config.get('labels', ['security-Vulnerability'])
     
     # Determine label color
     label_color = args.label_color
-    if not label_color and config.labels:
-        label_color = f"#{config.labels[0]['color']}"
     
-    print(f"🏷️  Labels to apply: {', '.join(labels)}")
+    print(f"Labels to apply: {', '.join(labels)}")
     if label_color:
-        print(f"🎨 Label color: {label_color}")
+        print(f"Label color: {label_color}")
     
     if args.force_update:
         print("🔄 Force update mode: Will update existing issues")

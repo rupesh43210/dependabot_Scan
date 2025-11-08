@@ -115,6 +115,8 @@ class GitHubIssueManager:
         title += f"High - {severity_counts['high']:02d}, "
         title += f"Medium - {severity_counts['medium']:02d}, "
         title += f"Low - {severity_counts['low']:02d}"
+        return title
+    
     def assign_issue_to_project(self, repo, issue, project_name: str) -> bool:
         """
         Assign an issue to a project using GitHub GraphQL API.
