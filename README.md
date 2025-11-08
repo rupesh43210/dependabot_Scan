@@ -17,6 +17,7 @@ A comprehensive tool for scanning GitHub repositories for Dependabot security vu
   - [Scenario 1: Scan Only](#scenario-1-scan-only)
   - [Scenario 2: Issue Creation Only](#scenario-2-issue-creation-only)
   - [Scenario 3: Complete Workflow](#scenario-3-complete-workflow)
+  - [Scenario 4: Managing Issue Lifecycle](#scenario-4-managing-issue-lifecycle)
 - [⚙️ Configuration](#️-configuration)
 - [🏷️ Label Management](#️-label-management)
 - [📊 Reports & Output](#-reports--output)
@@ -269,6 +270,76 @@ python create_security_issues.py --auto --labels "security,urgent" --project "Se
     python security_pipeline.py
     python create_security_issues.py --auto --labels "ci-cd,security,automated"
 ```
+</details>
+
+### Scenario 4: Managing Issue Lifecycle
+**When to use:** Automatically close resolved issues or reopen incorrectly closed ones
+
+#### Closing Fixed Issues
+
+Once vulnerabilities are fixed, automatically close the corresponding GitHub issues:
+
+```bash
+# Preview what would be closed
+python close_fixed_issues.py --dry-run
+
+# Actually close issues
+python close_fixed_issues.py
+```
+
+**What it does:**
+- Compares current vulnerabilities with issue content
+- Closes issues where **ALL** vulnerabilities are resolved
+- Adds a closing comment with resolution details
+- Updates GitHub Projects status to "Done"
+- Only closes issues that were created by the automation (safety check)
+
+#### Reopening Incorrectly Closed Issues
+
+If issues were closed by mistake, reopen them automatically:
+
+```bash
+# Preview what would be reopened
+python reopen_fixed.py --dry-run
+
+# Actually reopen issues
+python reopen_fixed.py
+```
+
+**What it does:**
+- Finds closed security issues that still have open vulnerabilities
+- Reopens those issues with an explanatory comment
+- Updates GitHub Projects status from "Done" back to "In Progress"
+- Only processes issues that were created by the automation
+
+<details>
+<summary>🔄 <strong>Issue Lifecycle Best Practices</strong></summary>
+
+**Recommended Workflow:**
+```bash
+# 1. Run security scan
+python security_pipeline.py scoped
+
+# 2. Close fixed issues
+python close_fixed_issues.py --dry-run   # Preview first
+python close_fixed_issues.py             # Then execute
+
+# 3. If you notice any issues closed incorrectly, reopen them
+python reopen_fixed.py --dry-run         # Preview first
+python reopen_fixed.py                   # Then execute
+```
+
+**Safety Features:**
+- Both scripts only process issues created by the automation (checks issue title and format)
+- Dry-run mode lets you preview changes before applying them
+- Scripts compare actual vulnerability state with issue content
+- Comments are added to provide audit trail
+
+**GitHub Projects Integration:**
+- Closed issues → Status updated to "Done"
+- Reopened issues → Status updated to "In Progress" or "To Do"
+- Provides clear visual status in project boards
+
 </details>
 
 ---

@@ -94,13 +94,13 @@ class IssueCloser:
         with open(report_file, 'r', encoding='utf-8') as f:
             reader = csv.DictReader(f)
             for row in reader:
-                repo_name = row.get('Repository', '').strip()
-                package = row.get('Package', '').strip()
+                repo_name = row.get('Repository Name', '').strip()
+                package = row.get('Component', '').strip()
                 severity = row.get('Severity', '').strip()
-                status = row.get('Status', '').strip().lower()
+                status = row.get('Status', '').strip().upper()
                 
                 # Only track open vulnerabilities
-                if status == 'open' and repo_name and package:
+                if status == 'OPEN' and repo_name and package:
                     if repo_name not in current_vulns:
                         current_vulns[repo_name] = set()
                     
