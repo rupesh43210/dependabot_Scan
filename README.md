@@ -95,9 +95,10 @@ source venv/bin/activate
 # Install dependencies
 pip install -r requirements.txt
 
-# Setup environment
-cp .env.example .env
-# Edit .env with your settings
+# Setup configuration
+cp config.json.sample config.json
+cp .env.sample .env
+# Edit config.json and .env with your settings
 ```
 
 ### Environment Configuration
@@ -176,11 +177,14 @@ python security_pipeline.py scoped
 
 **Scan Customization:**
 ```bash
-# Scan with custom scope
-python security_pipeline.py --max-repos 50
+# Scan all repositories in your organization
+python security_pipeline.py
 
-# Scan specific organization
-python security_pipeline.py --org MyOrganization
+# Scan only scoped repositories
+python security_pipeline.py scoped
+
+# List available scopes
+python security_pipeline.py --list-scopes
 ```
 
 **Report Outputs:**
@@ -240,11 +244,11 @@ python create_security_issues.py --auto --config team_config.json
 python security_pipeline.py
 python create_security_issues.py --auto
 
-# Method 2: One-liner
+# Method 2: One-liner (all repositories)
 python security_pipeline.py && python create_security_issues.py --auto
 
-# Method 3: Custom workflow
-python security_pipeline.py --org MyTeam
+# Method 3: Scoped workflow
+python security_pipeline.py scoped
 python create_security_issues.py --auto --labels "security,urgent" --project "Security Response"
 ```
 
@@ -433,11 +437,11 @@ python security_pipeline.py scoped
 # Scan all repositories in the organization
 python security_pipeline.py
 
-# Exclude test repositories
-python security_pipeline.py --exclude "*-test,*-demo"
+# List available scopes
+python security_pipeline.py --list-scopes
 
-# Limit number of repositories
-python security_pipeline.py --max-repos 10
+# Use a specific scope (if you have multiple)
+python security_pipeline.py scoped my_scope_name
 ```
 </details>
 
@@ -618,34 +622,44 @@ print(df['Severity'].value_counts())
 <details>
 <summary>⚡ <strong>Advanced Scanning</strong></summary>
 
-**Parallel Processing:**
+**Repository Scoping:**
 ```bash
-# Scan multiple organizations in parallel
-python security_pipeline.py --orgs "org1,org2,org3" --parallel
+# List all available scopes
+python security_pipeline.py --list-scopes
 
-# Batch processing with custom limits
-python security_pipeline.py --batch-size 50 --max-concurrent 5
+# Scan using the active scope from config.json
+python security_pipeline.py scoped
+
+# Scan using a specific scope
+python security_pipeline.py scoped Release_2
 ```
 
 **Filtering & Targeting:**
 ```bash
-# Scan only repositories with recent activity
-python security_pipeline.py --active-since "2024-01-01"
+# Define scopes in config.json to target specific repositories
+{
+  "scopes": {
+    "production": ["api-service", "web-app", "mobile-app"],
+    "development": ["dev-api", "test-app"],
+    "critical": ["payment-service", "auth-service"]
+  }
+}
 
-# Scan by repository pattern
-python security_pipeline.py --pattern "*-service,*-api"
-
-# Exclude archived repositories
-python security_pipeline.py --exclude-archived
+# Then scan specific scope
+python security_pipeline.py scoped production
 ```
 
-**Performance Optimization:**
+**Configuration Tips:**
 ```bash
-# Fast scan (skip detailed analysis)
-python security_pipeline.py --fast
+# Adjust output directory in config.json
+"scan": {
+  "output_dir": "./custom_reports"
+}
 
-# Cache results for repeated runs
-python security_pipeline.py --cache --cache-ttl 3600
+# Set active scope for default scoped scans
+"scan": {
+  "active_scope": "production"
+}
 ```
 </details>
 
@@ -1159,27 +1173,25 @@ cat .env
 
 **Issue: Label Creation Failed**
 ```bash
-# Check label configuration
-python config_manager.py --validate-labels
-
-# Test label creation manually
+# Verify GitHub issue manager can create labels
 python -c "
 from github_issue_manager import GitHubIssueManager
 manager = GitHubIssueManager()
-manager.create_labels_if_not_exist('test-repo')
+print('GitHub Issue Manager initialized successfully')
 "
 ```
 
 **Issue: Project Assignment Failed**
 ```bash
 # Test GraphQL API access
-python graphql_assign_issues.py --test
-
-# Check project number
 python -c "
-from config_manager import IssueConfig
-config = IssueConfig()
-print(f'Project number: {config.project_number}')
+import os
+from github import Github
+token = os.getenv('GITHUB_TOKEN')
+if token:
+    print('GitHub token found')
+else:
+    print('ERROR: GitHub token not found in .env')
 "
 ```
 </details>
@@ -1213,12 +1225,17 @@ python security_pipeline.py
 
 **Issue: Large Organization Timeouts**
 ```bash
-# Use batch processing
-python security_pipeline.py --batch-size 25 --max-repos 100
+# Use scoped scanning to limit repositories
+python security_pipeline.py scoped
 
-# Process in chunks
-python security_pipeline.py --start-index 0 --end-index 50
-python security_pipeline.py --start-index 50 --end-index 100
+# Adjust scan settings in config.json
+{
+  "scan": {
+    "rate_limit": 5000,
+    "timeout": 60,
+    "max_repositories": 50
+  }
+}
 ```
 </details>
 
@@ -1238,17 +1255,20 @@ python security_pipeline.py --start-index 50 --end-index 100
 
 **Debug Commands:**
 ```bash
-# Run with verbose output
-python security_pipeline.py --verbose
+# Check configuration
+python -m json.tool config.json
+python -m json.tool .env.sample
 
-# Test individual components
-python config_manager.py --test
-python github_issue_manager.py --test
-python vulnerability_scanner.py --test
+# Test GitHub connectivity
+python -c "
+from vulnerability_scanner import VulnerabilityScanner
+scanner = VulnerabilityScanner()
+print('Scanner initialized successfully')
+"
 
 # Check dependencies
 pip check
-python -c "import github, requests, pandas; print('All dependencies OK')"
+python -c "import github, requests, pandas, openpyxl; print('All dependencies OK')"
 ```
 </details>
 
@@ -1259,7 +1279,7 @@ python -c "import github, requests, pandas; print('All dependencies OK')"
 
 **Self-Help Checklist:**
 1. ✅ Check the troubleshooting section above
-2. ✅ Review configuration examples in `CONFIG_GUIDE.md`
+2. ✅ Review `config.json.sample` and `.env.sample` for configuration examples
 3. ✅ Validate environment setup with `python setup_env.py`
 4. ✅ Test GitHub API connectivity
 5. ✅ Check token permissions and scopes
@@ -1268,10 +1288,10 @@ python -c "import github, requests, pandas; print('All dependencies OK')"
 ```bash
 # System information
 python --version
-pip list | grep -E "(github|requests|pandas)"
+pip list | grep -E "(github|requests|pandas|openpyxl)"
 
 # Configuration status
-python config_manager.py
+python -m json.tool config.json
 
 # Test connection
 python -c "
@@ -1283,10 +1303,10 @@ print(f'GitHub URL: {os.getenv(\"GITHUB_ENTERPRISE_URL\", \"Not set\")}')
 ```
 
 **Common Solutions:**
-- 🔑 **Token issues** → Regenerate token with correct scopes
-- ⚙️ **Config issues** → Use `config_examples.py` to generate templates
+- 🔑 **Token issues** → Regenerate token with correct scopes (`repo`, `security_events`)
+- ⚙️ **Config issues** → Refer to `config.json.sample` for proper structure
 - 📊 **No vulnerabilities** → Verify Dependabot is enabled on repositories
-- 🚀 **Performance issues** → Use `--batch-size` and `--max-repos` parameters
+- 🚀 **Scoping issues** → Check `config.json` for correct scope configuration
 </details>
 
 ---
@@ -1340,13 +1360,12 @@ pre-commit install
 **Testing:**
 ```bash
 # Test core functionality
-python config_manager.py --test
-python security_pipeline.py --dry-run
-python create_security_issues.py --auto --dry-run
+python security_pipeline.py scoped  # Test scoped scan
+python create_security_issues.py --auto --dry-run  # Test issue creation (if supported)
 
-# Test with different configurations
-python config_examples.py
-python create_security_issues.py --config examples/minimal_config_example.json --dry-run
+# Validate configuration
+python -m json.tool config.json
+python -c "from security_pipeline import ScopeManager; sm = ScopeManager(); print(sm.get_available_scopes())"
 ```
 </details>
 
@@ -1365,19 +1384,20 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ```bash
 # 🔧 Setup & Configuration
 python setup_env.py                          # Interactive setup
-python config_manager.py                     # View current config
-python config_examples.py                    # Generate examples
+cp config.json.sample config.json            # Copy config template
+cp .env.sample .env                          # Copy environment template
+# Edit config.json and .env with your settings
 
 # 🔍 Scanning Only  
 python security_pipeline.py                  # Scan all repositories
-python security_pipeline.py --max-repos 25   # Limit scan scope
+python security_pipeline.py scoped           # Scan repositories in active scope
 
 # 🎯 Issue Creation Only
 python create_security_issues.py --auto      # Create from latest scan
 python create_security_issues.py --file path/to/vulnerabilities.csv
 
 # 🔄 Complete Workflow
-python security_pipeline.py && python create_security_issues.py --auto
+python security_pipeline.py scoped && python create_security_issues.py --auto
 
 # ⚙️ Customization
 python create_security_issues.py --auto --config team_config.json
@@ -1385,16 +1405,20 @@ python create_security_issues.py --auto --labels "urgent,security,p1"
 python create_security_issues.py --auto --project "Emergency Response"
 ```
 
-### 📋 Configuration Templates
+### 📋 Configuration Files
 
-| Template | Use Case | Command |
-|----------|----------|---------|
-| **Default** | General purpose | `python config_manager.py` |
-| **Security Team** | Security-focused labels | `python config_examples.py --template security` |
-| **DevOps Team** | Automation-focused | `python config_examples.py --template devops` |
-| **Compliance** | Regulatory tracking | `python config_examples.py --template compliance` |
-| **Minimal** | Basic setup | `python config_examples.py --template minimal` |
+| File | Purpose | Action |
+|------|---------|--------|
+| **config.json.sample** | Configuration template | Copy to `config.json` and customize |
+| **.env.sample** | Environment variables template | Copy to `.env` and add secrets |
+| **config.json** | Your configuration | Edit with your scopes and settings |
+| **.env** | Your secrets | Add GitHub token and credentials |
+
+**Key Configuration Sections:**
+- `scan` - Scan settings (output directory, scope, mode)
+- `scopes` - Repository groups for targeted scanning
+- `responsibles` - Repository ownership mapping
 
 ---
 
-**🎯 Need Help?** Check the [troubleshooting section](#-troubleshooting) or review [configuration examples](CONFIG_GUIDE.md)!
+**🎯 Need Help?** Check the [troubleshooting section](#-troubleshooting) or review `config.json.sample` for examples!
