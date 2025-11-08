@@ -359,21 +359,13 @@ def main():
                                 stats['project_updated'] += 1
                             
                             # Add comment
-                            comment = f"""## Issue Reopened - Automation Error
+                            comment = f"""## Issue Reopened
 
-This issue was incorrectly closed due to a bug in the closure script.
+This issue was closed prematurely. Upon review, **{len(still_open)} vulnerabilities are still open** and require attention.
 
-**Bug Details:**
-The script was looking for wrong CSV column names ('Repository'/'Package' instead of 'Repository Name'/'Component'), causing it to never detect open vulnerabilities.
+Please continue working on resolving the remaining security issues. The issue will be closed once all vulnerabilities have been properly addressed.
 
-**Current Status:**
-- **{len(still_open)} vulnerabilities are still open**
-- The bug has been fixed
-- This issue will remain open until all vulnerabilities are resolved
-- Project status updated back to "In Progress"
-
----
-*Reopened by reopen_fixed.py on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*
+Status updated: {datetime.now().strftime('%Y-%m-%d')}
 """
                             
                             issue.create_comment(comment)

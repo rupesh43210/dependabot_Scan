@@ -390,11 +390,10 @@ class IssueCloser:
                     else:
                         # Close the issue with a comment
                         closing_comment = (
-                            f"🎉 **All vulnerabilities mentioned in this issue have been resolved!**\n\n"
-                            f"✅ Fixed vulnerabilities: {len(issue_vulns)}\n"
-                            f"📅 Verified on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
-                            f"This issue is being automatically closed as all security vulnerabilities "
-                            f"have been addressed. If you believe this was closed in error, please reopen it."
+                            f"## ✅ All vulnerabilities resolved\n\n"
+                            f"All {len(issue_vulns)} security vulnerabilities mentioned in this issue have been addressed.\n\n"
+                            f"Verified on: {datetime.now().strftime('%Y-%m-%d')}\n\n"
+                            f"Closing this issue. If you have any concerns, please reopen."
                         )
                         
                         issue.create_comment(closing_comment)
