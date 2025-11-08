@@ -273,7 +273,7 @@ class StandaloneIssueCreator:
             # Label doesn't exist, create it
             try:
                 if color is None:
-                    color = 'B60205'  # Default red color for security labels
+                    color = 'fbca04'  # Default yellow/orange color for security labels
                 else:
                     color = color.lstrip('#')
                 
