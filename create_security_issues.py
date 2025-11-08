@@ -103,7 +103,6 @@ import pandas as pd
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from github_issue_manager import GitHubIssueManager
-from config_manager import IssueConfig
 
 
 class StandaloneIssueCreator:
@@ -111,23 +110,29 @@ class StandaloneIssueCreator:
     Standalone tool for creating GitHub issues from vulnerability scan results.
     """
     
-    def __init__(self, github_token: str, config: IssueConfig = None):
+    def __init__(self, github_token: str, config: dict = None):
         """
         Initialize the standalone issue creator.
         
         Args:
             github_token: GitHub personal access token
-            config: Configuration object (optional, will create default if not provided)
+            config: Configuration dictionary (optional)
         """
-        self.config = config or IssueConfig()
+        self.config = config or {}
         self.github_token = github_token
+        
+        # Get org and base URL from environment if not in config
+        org_name = self.config.get('organization', os.getenv('GITHUB_ORG', 'MiDAS'))
+        base_url = self.config.get('base_url', os.getenv('GITHUB_ENTERPRISE_URL'))
         
         # Initialize GitHub Issue Manager with config values
         self.issue_manager = GitHubIssueManager(
             github_token=github_token,
-            org_name=self.config.organization,
-            base_url=self.config.base_url
+            org_name=org_name,
+            base_url=base_url
         )
+        
+        self.org_name = org_name
         
         self.stats = {
             'scan_files_processed': 0,
@@ -387,8 +392,13 @@ class StandaloneIssueCreator:
         try:
             repo = self.issue_manager.github_client.get_repo(f"{self.org_name}/{repository_name}")
             
-            # Search for existing vulnerability issues with more flexible matching
-            issues = repo.get_issues(state='open', labels=['security', 'vulnerability'])
+            # Search for existing vulnerability issues - try both label formats
+            # First try the combined label 'security-Vulnerability'
+            try:
+                issues = list(repo.get_issues(state='open', labels=['security-Vulnerability']))
+            except:
+                # Fall back to separate labels if combined label doesn't exist
+                issues = list(repo.get_issues(state='open', labels=['security', 'vulnerability']))
             
             for issue in issues:
                 # Check if this is a vulnerability issue for this repo
@@ -562,12 +572,12 @@ Examples:
         print("Please set your GitHub token in the .env file")
         sys.exit(1)
     
-    # Load configuration
-    config = IssueConfig(args.config)
+    # Load configuration (optional, not required for basic operation)
+    config = {}
     
-    print("🔧 GitHub Issue Creator for Security Vulnerabilities")
-    print(f"📅 Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"🏢 Organization: {config.organization}")
+    print("GitHub Issue Creator for Security Vulnerabilities")
+    print(f"Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"Organization: {os.getenv('GITHUB_ORG', 'MiDAS')}")
     
     # Show configuration summary if debug logging is enabled
     if config.enable_debug_logging:
