@@ -135,6 +135,34 @@ class IssueCloser:
         
         return vuln_ids
     
+    def is_automated_security_issue(self, issue) -> bool:
+        """
+        Check if the issue was created by our security automation.
+        
+        Args:
+            issue: GitHub issue object
+            
+        Returns:
+            True if this is an automated security issue we created
+        """
+        # The security-Vulnerability label itself indicates this was created by our automation
+        # Additionally, verify the title format matches our pattern: "RepoName - Fix all dependabot issues"
+        if not issue.title or not issue.body:
+            return False
+        
+        title_lower = issue.title.lower()
+        
+        # Check if title matches our format
+        has_correct_format = (
+            'fix all dependabot issues' in title_lower or
+            'dependabot' in title_lower
+        )
+        
+        # Check if body has our vulnerability table format
+        has_table = '| Package |' in issue.body or '| package |' in issue.body.lower()
+        
+        return has_correct_format and has_table
+    
     def close_fixed_issues(self, repo_name: str, current_vulns: Set[str]) -> None:
         """
         Close issues for a repository that have been fixed.
@@ -160,6 +188,11 @@ class IssueCloser:
             self.stats['open_issues_found'] += len(open_issues)
             
             for issue in open_issues:
+                # Safety check: Only process issues created by our automation
+                if not self.is_automated_security_issue(issue):
+                    print(f"   ⚠️  Issue #{issue.number}: Not created by automation, skipping")
+                    self.stats['issues_skipped'] += 1
+                    continue
                 # Extract vulnerabilities mentioned in the issue
                 issue_vulns = self.extract_vulnerability_ids_from_issue(issue.body)
                 
@@ -258,7 +291,11 @@ class IssueCloser:
 
 def find_latest_report() -> Optional[Path]:
     """Find the most recent vulnerability report."""
+    # Try dependabot_Scan/reports first, then parent ../reports
     reports_dir = Path(__file__).parent / 'reports'
+    
+    if not reports_dir.exists():
+        reports_dir = Path(__file__).parent.parent / 'reports'
     
     if not reports_dir.exists():
         return None
