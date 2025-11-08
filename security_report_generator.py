@@ -36,6 +36,46 @@ except ImportError:
 
 
 class SecurityReportGenerator:
+    # Load responsibles from config.json
+    RESPONSIBLE_MAP = None
+
+    @staticmethod
+    def load_config(config_path="dependabot_Scan/config.json"):
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                config = json.load(f)
+            return config
+        except Exception as e:
+            print(f"⚠️  Could not load config: {e}")
+            return {}
+
+    def get_scan_settings(self):
+        if not hasattr(self, '_scan_settings'):
+            config = self.load_config()
+            self._scan_settings = config.get('scan', {})
+        return self._scan_settings
+
+    def get_scopes(self):
+        if not hasattr(self, '_scopes'):
+            config = self.load_config()
+            self._scopes = config.get('scopes', {})
+        return self._scopes
+
+    def load_responsibles_from_config(self, config_path="dependabot_Scan/config.json"):
+        config = self.load_config(config_path)
+        return config.get("responsibles", {})
+
+    def get_responsible(self, repo):
+        if self.RESPONSIBLE_MAP is None:
+            self.RESPONSIBLE_MAP = self.load_responsibles_from_config()
+        vals = self.RESPONSIBLE_MAP.get(repo, ["", ""])
+        if isinstance(vals, tuple):
+            return vals
+        if isinstance(vals, list) and len(vals) == 2:
+            return tuple(vals)
+        if isinstance(vals, list) and len(vals) == 1:
+            return (vals[0], "")
+        return ("", "")
     """
     Enhanced security report generator with advanced analytics and visualizations.
     
@@ -80,18 +120,31 @@ class SecurityReportGenerator:
         'dismissed': {'bg': 'D3D3D3', 'font': '000000'} # Light Gray
     }
     
-    def __init__(self, scoped_repositories: Optional[List[str]] = None):
+    def __init__(self, scoped_repositories: Optional[List[str]] = None, active_scope: Optional[str] = None):
         """
         Initialize the enhanced report generator.
         
         Args:
             scoped_repositories: Optional list of repositories in scope (for including zero-vuln repos)
+            active_scope: Optional name of the active scope (e.g., "10R1")
         """
         self.data = None
         self.stats = {}
         self.analytics = {}
         self.trends = {}
         self.scoped_repositories = scoped_repositories or []
+        self.active_scope = active_scope
+        
+        # Load output directory from config
+        self.output_dir = self._load_output_dir_from_config()
+    
+    def _load_output_dir_from_config(self) -> str:
+        """Load output directory from config.json."""
+        try:
+            config = self.load_config()
+            return config.get('scan', {}).get('output_dir', './reports')
+        except Exception:
+            return './reports'
     
     def load_vulnerability_data(self, data_source: str) -> bool:
         """
@@ -424,31 +477,23 @@ class SecurityReportGenerator:
         
         for repo in repositories_to_include:
             repo_vulns = open_vulns[open_vulns['repository'] == repo] if not open_vulns.empty else pd.DataFrame()
-            
+            responsible1, responsible2 = self.get_responsible(repo)
             if not repo_vulns.empty:
-                # Normalize severity values to uppercase
                 repo_vulns['severity'] = repo_vulns['severity'].str.upper()
-                
-                # Count by severity
                 severity_counts = repo_vulns['severity'].value_counts()
-                
-                # Debug: Print severity counts for first few repos
                 if len(repo_summary) < 3:
                     print(f"  Debug - {repo}: severities = {severity_counts.to_dict()}")
-                
-                # Calculate risk score
                 risk_score = sum(
                     severity_counts.get(severity, 0) * weight
                     for severity, weight in self.SEVERITY_WEIGHTS.items()
                 )
-                
-                # All vulnerabilities for this repo (including closed)
                 all_repo_vulns = self.data[self.data['repository'] == repo]
                 resolved_vulns = all_repo_vulns[all_repo_vulns['alert_state'].isin(['fixed', 'dismissed'])]
                 avg_resolution_days = resolved_vulns['days_to_resolution'].mean() if 'days_to_resolution' in resolved_vulns.columns and len(resolved_vulns) > 0 else None
-                
                 repo_summary.append({
                     'Repository Name': repo,
+                    'Responsible1': responsible1,
+                    'Responsible2': responsible2,
                     'Risk Score': risk_score,
                     'Total Open': len(repo_vulns),
                     'Critical': severity_counts.get('CRITICAL', 0),
@@ -461,13 +506,13 @@ class SecurityReportGenerator:
                     'Oldest Open (Days)': repo_vulns['vulnerability_age_days'].max() if len(repo_vulns) > 0 and 'vulnerability_age_days' in repo_vulns.columns else 'N/A'
                 })
             else:
-                # Repository with zero vulnerabilities
                 all_repo_vulns = self.data[self.data['repository'] == repo] if not self.data.empty else pd.DataFrame()
                 resolved_vulns = all_repo_vulns[all_repo_vulns['alert_state'].isin(['fixed', 'dismissed'])] if not all_repo_vulns.empty else pd.DataFrame()
                 avg_resolution_days = resolved_vulns['days_to_resolution'].mean() if 'days_to_resolution' in resolved_vulns.columns and len(resolved_vulns) > 0 else None
-                
                 repo_summary.append({
                     'Repository Name': repo,
+                    'Responsible1': responsible1,
+                    'Responsible2': responsible2,
                     'Risk Score': 0,
                     'Total Open': 0,
                     'Critical': 0,
@@ -901,6 +946,49 @@ class SecurityReportGenerator:
             print(f"⚠️  Enhanced KPI formatting error: {e}")
 
     def _apply_executive_formatting(self, worksheet, dataframe: pd.DataFrame):
+        # Custom coloring for Critical column
+        try:
+            from openpyxl.styles import PatternFill
+            col_map = {col: idx+1 for idx, col in enumerate(dataframe.columns)}
+            for row in range(2, len(dataframe)+2):
+                # Critical
+                if 'Critical' in col_map:
+                    val = worksheet.cell(row=row, column=col_map['Critical']).value
+                    if val and val != 0:
+                        worksheet.cell(row=row, column=col_map['Critical']).fill = PatternFill(start_color='B1A0C7', end_color='B1A0C7', fill_type='solid')
+        except Exception as e:
+            print(f"⚠️  Custom critical coloring error: {e}")
+        # Custom coloring for High, Medium, Low columns and repo name cell
+        try:
+            from openpyxl.styles import PatternFill
+            # Find column indices
+            col_map = {col: idx+1 for idx, col in enumerate(dataframe.columns)}
+            for row in range(2, len(dataframe)+2):
+                # High
+                if 'High' in col_map:
+                    val = worksheet.cell(row=row, column=col_map['High']).value
+                    if val and val != 0:
+                        worksheet.cell(row=row, column=col_map['High']).fill = PatternFill(start_color='FF0000', end_color='FF0000', fill_type='solid')
+                # Medium
+                if 'Medium' in col_map:
+                    val = worksheet.cell(row=row, column=col_map['Medium']).value
+                    if val and val != 0:
+                        worksheet.cell(row=row, column=col_map['Medium']).fill = PatternFill(start_color='F79646', end_color='F79646', fill_type='solid')
+                # Low
+                if 'Low' in col_map:
+                    val = worksheet.cell(row=row, column=col_map['Low']).value
+                    if val and val != 0:
+                        worksheet.cell(row=row, column=col_map['Low']).fill = PatternFill(start_color='DAEEF3', end_color='DAEEF3', fill_type='solid')
+                # Repo Name
+                if 'Total Open' in col_map and 'Repository Name' in col_map:
+                    open_val = worksheet.cell(row=row, column=col_map['Total Open']).value
+                    repo_cell = worksheet.cell(row=row, column=col_map['Repository Name'])
+                    if open_val == 0:
+                        repo_cell.fill = PatternFill(start_color='92D050', end_color='92D050', fill_type='solid')
+                    elif open_val and open_val > 0:
+                        repo_cell.fill = PatternFill(start_color='FFFF00', end_color='FFFF00', fill_type='solid')
+        except Exception as e:
+            print(f"⚠️  Custom executive summary coloring error: {e}")
         """Apply formatting for repository executive summary."""
         try:
             from openpyxl.styles import Font, PatternFill
@@ -1010,9 +1098,11 @@ class SecurityReportGenerator:
         if output_dir:
             reports_dir = Path(output_dir)
         else:
-            reports_dir = Path("reports")
+            reports_dir = Path(self.output_dir)
         
-        timestamped_dir = reports_dir / f"security_reports_{timestamp}"
+        # Add scope prefix if active scope is set
+        scope_prefix = f"{self.active_scope}_" if self.active_scope else ""
+        timestamped_dir = reports_dir / f"{scope_prefix}security_reports_{timestamp}"
         timestamped_dir.mkdir(parents=True, exist_ok=True)
         
         print(f"📁 Creating comprehensive reports in: {timestamped_dir}")

@@ -107,7 +107,45 @@ ensure_venv()
 
 from vulnerability_scanner import VulnerabilityScanner
 from security_report_generator import SecurityReportGenerator
-from repository_scope_manager import RepositoryScopeManager
+import json
+
+
+class ScopeManager:
+    """Simple scope manager that reads from config.json"""
+    
+    def __init__(self, config_file="dependabot_Scan/config.json"):
+        self.config_file = config_file
+        self.config = self._load_config()
+    
+    def _load_config(self):
+        try:
+            with open(self.config_file, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"⚠️ Could not load config: {e}")
+            return {}
+    
+    def get_available_scopes(self):
+        """Get list of available scope names."""
+        return list(self.config.get('scopes', {}).keys())
+    
+    def get_active_scope(self):
+        """Get the active scope name (first one in config)."""
+        scopes = self.get_available_scopes()
+        return scopes[0] if scopes else None
+    
+    def get_repositories_for_scope(self, scope_name):
+        """Get list of repositories for a specific scope."""
+        return self.config.get('scopes', {}).get(scope_name, [])
+    
+    def set_active_scope(self, scope_name):
+        """Set active scope (no-op for simplified version)."""
+        pass
+    
+    def print_scope_info(self, scope_name):
+        """Print information about a scope."""
+        repos = self.get_repositories_for_scope(scope_name)
+        print(f"📋 Scope '{scope_name}' contains {len(repos)} repositories")
 
 
 class SecurityPipeline:
@@ -122,7 +160,7 @@ class SecurityPipeline:
     - Executive and technical reporting
     """
     
-    def __init__(self, github_token: str, org_name: str, specific_repos: Optional[List[str]] = None):
+    def __init__(self, github_token: str, org_name: str, specific_repos: Optional[List[str]] = None, active_scope: Optional[str] = None):
         """
         Initialize the security pipeline.
         
@@ -130,16 +168,18 @@ class SecurityPipeline:
             github_token: GitHub Enterprise personal access token
             org_name: Organization name to scan
             specific_repos: Optional list of specific repository names to scan
+            active_scope: Optional name of the active scope (e.g., "10R1")
         """
         self.github_token = github_token
         self.org_name = org_name
         self.specific_repos = specific_repos
+        self.active_scope = active_scope
         self.timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.temp_files = []
         
         # Initialize components
         self.scanner = VulnerabilityScanner(github_token)
-        self.report_generator = SecurityReportGenerator(specific_repos)
+        self.report_generator = SecurityReportGenerator(specific_repos, active_scope)
     
     def run_vulnerability_scan(self) -> bool:
         """
@@ -226,7 +266,9 @@ class SecurityPipeline:
         # If no vulnerabilities, create a simple success report
         if not has_vulnerabilities:
             print("✅ No vulnerabilities to report - creating clean bill of health report")
-            reports_dir = f"reports/security_report_{self.timestamp}"
+            # Use configured output directory
+            output_base = self.report_generator.output_dir
+            reports_dir = f"{output_base}/security_report_{self.timestamp}"
             Path(reports_dir).mkdir(parents=True, exist_ok=True)
             
             # Create a summary file
@@ -465,11 +507,15 @@ Examples:
     load_dotenv()
     
     # Initialize scope manager
-    scope_manager = RepositoryScopeManager()
+    scope_manager = ScopeManager()
     
     # Handle --list-scopes option
     if args.list_scopes:
-        scope_manager.print_scope_info()
+        scopes = scope_manager.get_available_scopes()
+        print("📋 Available scopes:")
+        for scope in scopes:
+            repos = scope_manager.get_repositories_for_scope(scope)
+            print(f"  • {scope}: {len(repos)} repositories")
         sys.exit(0)
     
     # Get GitHub token
@@ -503,12 +549,14 @@ Examples:
     # Determine scanning mode and repositories
     specific_repos = None
     scan_mode = "all"
+    active_scope = None  # Track the active scope name for report prefix
     
     if args.mode == "scoped":
         scan_mode = "scoped"
         
         # Determine which scope to use
         scope_name = args.scope if args.scope else scope_manager.get_active_scope()
+        active_scope = scope_name  # Store for report generation
         
         print(f"🎯 Scoped scanning mode activated")
         print(f"   Active scope: {scope_name}")
@@ -555,8 +603,8 @@ Examples:
     else:
         print(f"   Target repositories: All repositories")
     
-    # Create and run pipeline
-    pipeline = SecurityPipeline(github_token, org_name, specific_repos)
+    # Create and run pipeline with scope information
+    pipeline = SecurityPipeline(github_token, org_name, specific_repos, active_scope)
     
     success = pipeline.run_complete_pipeline()
     

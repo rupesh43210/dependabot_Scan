@@ -271,56 +271,89 @@ python create_security_issues.py --auto --labels "security,urgent" --project "Se
 
 ## ⚙️ Configuration
 
-### 📝 Issue Configuration (`issue_config.json`)
+### 📝 Configuration Overview
 
-The heart of the issue creation system. Configure multiple labels, project assignment, and formatting:
+All non-sensitive configuration (scan settings, repository scopes, responsibles, etc.) is managed in a single file: `dependabot_Scan/config.json`.
 
-<details>
-<summary>🏷️ <strong>Multiple Labels Configuration</strong></summary>
+**Sensitive information (tokens, secrets, etc.) must remain in `.env` and should never be committed to version control.**
 
+#### Example `config.json` structure:
 ```json
 {
-  "issue_settings": {
-    "default_project": "OPL Management",
-    "project_number": 23,
-    "labels": [
-      {
-        "name": "security-Vulnerability",
-        "color": "fbca04",
-        "description": "Security vulnerability that needs to be addressed"
-      },
-      {
-        "name": "dependabot",
-        "color": "0366d6",
-        "description": "Dependabot security alert"
-      },
-      {
-        "name": "high-priority",
-        "color": "d73a4a",
-        "description": "High priority security issue"
-      },
-      {
-        "name": "critical",
-        "color": "b60205",
-        "description": "Critical security vulnerability"
-      },
-      {
-        "name": "auto-created",
-        "color": "7057ff",
-        "description": "Automatically created issue"
-      }
-    ],
-    "title_format": "{repository} - Fix all dependabot issues Critical - {critical:02d}, High - {high:02d}, Medium - {medium:02d}, Low - {low:02d}",
-    "auto_assign_project": true,
-    "include_timestamp": false
+  "scan": {
+    "rate_limit": 5000,
+    "timeout": 30,
+    "max_repositories": 10,
+    "output_dir": "./reports",
+    "report_prefix": "security_reports",
+    "min_severity": "LOW",
+    "alert_states": ["open", "fixed", "dismissed"]
   },
-  "github_settings": {
-    "organization": "MiDAS",
-    "base_url": "https://github.boschdevcloud.com"
+  "scopes": {
+    "10R1": [
+      "MiDAS-Platform",
+      "MBD-UTA",
+      "uc-tda-api",
+      "RSA_SS6_Backend",
+      "uc-misra-assist-api",
+      "uc-duta-api",
+      "uc-code-review-api",
+      "ss6-ask-midas",
+      "uc-aspireai-api",
+      "uc-tla-api",
+      "uc-cia-api",
+      "uc-aoob",
+      "aoob-ui",
+      "uc-esperant-ai-api",
+      "uc-dar-api",
+      "uc-hsia-api",
+      "uc-ditto-api",
+      "uc-swrs-ai-api",
+      "ss9-midas-ui",
+      "MiDAS-UI-Market-Place",
+      "uc-mbd-remote-ui",
+      "uc-tda-remote-ui",
+      "uc-ps-tda-remote-ui"
+    ]
+  },
+  "responsibles": {
+    "MiDAS-Platform": ["Jayaraj K (SX/ETD3-MM   BGSW/PJ-MiDAS)", ""],
+    "MBD-UTA": ["Mittal Swayam (BGSW/PJ-MiDAS)", "Praveen V A Sriram (BGSW/PJ-MiDAS)"],
+    "uc-tda-api": ["Baranwal Shraddhey (BGSW/ERD2)", ""],
+    "RSA_SS6_Backend": ["Palaniappanmuthuselvan Pranesh (BGSW/PJ-MiDAS)", ""],
+    "uc-misra-assist-api": ["Poojitha Ramachandra (BGSW/PJ-MiDAS)", "Mallikarjun Puttallavar Akshay (BGSW/PJ-MiDAS)"],
+    "uc-duta-api": ["Poojitha Ramachandra (BGSW/PJ-MiDAS)", "Mallikarjun Puttallavar Akshay (BGSW/PJ-MiDAS)"],
+    "uc-code-review-api": ["Poojitha Ramachandra (BGSW/PJ-MiDAS)", ""],
+    "ss6-ask-midas": ["Mittal Swayam (BGSW/PJ-MiDAS)", "FIXED-TERM Singh Rajat (BGSW/PJ-ETA-B)"],
+    "uc-aspireai-api": ["Griesche Stefan (XC/ENA2)", "Rani Mysore Guruswamy (BGSW/PJ-MiDAS)"],
+    "uc-tla-api": ["Manjunathan Jayaseelan (MS/PJ-AI-NE2-XC)", ""],
+    "uc-cia-api": ["Kesavamoorthy Balasubramanian (MS/ECC-CF3-XC)", ""],
+    "uc-aoob": ["Poojitha Ramachandra (BGSW/PJ-MiDAS)", "Mallikarjun Puttallavar Akshay (BGSW/PJ-MiDAS)"],
+    "aoob-ui": ["Mallikarjun Puttallavar Akshay (BGSW/PJ-MiDAS)", ""],
+    "uc-esperant-ai-api": ["Goel Harshit (MS/EAC22-EM)", ""],
+    "uc-dar-api": ["Tiwari Aditya (MS/ENH32)", ""],
+    "uc-hsia-api": ["Poojitha Ramachandra (BGSW/PJ-MiDAS)", ""],
+    "uc-ditto-api": ["Hari Priya E (MS/ECQ3-XC)", ""],
+    "uc-swrs-ai-api": ["Aditya Sharma (BGSW/ERD1)", ""],
+    "ss9-midas-ui": ["Naveen Garla Surendra (BGSW/PJ-MiDAS)", "EXTERNAL Subbayana Koppal Swamy Anitha (Capgemini, BGSW/PJ-MiDAS)"],
+    "MiDAS-UI-Market-Place": ["Naveen Garla Surendra (BGSW/PJ-MiDAS)", "EXTERNAL Subbayana Koppal Swamy Anitha (Capgemini, BGSW/PJ-MiDAS)"],
+    "uc-mbd-remote-ui": ["Naveen Garla Surendra (BGSW/PJ-MiDAS)", "EXTERNAL Subbayana Koppal Swamy Anitha (Capgemini, BGSW/PJ-MiDAS)"],
+    "uc-tda-remote-ui": ["Mudka Nikhil (MS/EMT5-VM)", "Vignesh Natarajan (MS/ESY9-VM)"],
+    "uc-ps-tda-remote-ui": ["Mohapatra Aparajita (MS/ETB8-PS)", ""]
   }
 }
 ```
-</details>
+
+#### Example `.env` (for secrets only):
+```env
+GITHUB_TOKEN=your_github_token
+GITHUB_ENTERPRISE_URL=https://github.boschdevcloud.com/
+GITHUB_ORG=MiDAS
+```
+
+**Never commit your `.env` file to version control.**
+
+---
 
 <details>
 <summary>🎯 <strong>Team-Specific Configurations</strong></summary>
