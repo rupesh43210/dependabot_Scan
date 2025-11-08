@@ -273,9 +273,30 @@ python create_security_issues.py --auto --labels "security,urgent" --project "Se
 
 ### 📝 Configuration Overview
 
-All non-sensitive configuration (scan settings, repository scopes, responsibles, etc.) is managed in a single file: `dependabot_Scan/config.json`.
+All non-sensitive configuration (scan settings, repository scopes, responsibles, etc.) is managed in a single file: `config.json`.
 
 **Sensitive information (tokens, secrets, etc.) must remain in `.env` and should never be committed to version control.**
+
+#### Setup Instructions:
+
+1. **Create your configuration file:**
+   ```bash
+   # Copy the sample configuration
+   cp config.json.sample config.json
+   ```
+
+2. **Edit `config.json`** with your actual values:
+   - Update repository names in the `scopes` section
+   - Add your team's responsible persons in the `responsibles` section
+   - Adjust scan settings as needed
+
+3. **Create your environment file:**
+   ```bash
+   # Copy the sample environment file
+   cp .env.sample .env
+   ```
+
+4. **Edit `.env`** with your GitHub credentials (never commit this file)
 
 #### Example `config.json` structure:
 ```json
@@ -287,68 +308,41 @@ All non-sensitive configuration (scan settings, repository scopes, responsibles,
     "output_dir": "./reports",
     "report_prefix": "security_reports",
     "min_severity": "LOW",
-    "alert_states": ["open", "fixed", "dismissed"]
+    "alert_states": ["open", "fixed", "dismissed"],
+    "default_mode": "scoped",
+    "active_scope": "10R1"
   },
   "scopes": {
     "10R1": [
-      "MiDAS-Platform",
-      "MBD-UTA",
-      "uc-tda-api",
-      "RSA_SS6_Backend",
-      "uc-misra-assist-api",
-      "uc-duta-api",
-      "uc-code-review-api",
-      "ss6-ask-midas",
-      "uc-aspireai-api",
-      "uc-tla-api",
-      "uc-cia-api",
-      "uc-aoob",
-      "aoob-ui",
-      "uc-esperant-ai-api",
-      "uc-dar-api",
-      "uc-hsia-api",
-      "uc-ditto-api",
-      "uc-swrs-ai-api",
-      "ss9-midas-ui",
-      "MiDAS-UI-Market-Place",
-      "uc-mbd-remote-ui",
-      "uc-tda-remote-ui",
-      "uc-ps-tda-remote-ui"
+      "repository-name-1",
+      "repository-name-2",
+      "repository-name-3"
+    ],
+    "Release_2": [
+      "another-repo-1",
+      "another-repo-2"
     ]
   },
   "responsibles": {
-    "MiDAS-Platform": ["Jayaraj K (SX/ETD3-MM   BGSW/PJ-MiDAS)", ""],
-    "MBD-UTA": ["Mittal Swayam (BGSW/PJ-MiDAS)", "Praveen V A Sriram (BGSW/PJ-MiDAS)"],
-    "uc-tda-api": ["Baranwal Shraddhey (BGSW/ERD2)", ""],
-    "RSA_SS6_Backend": ["Palaniappanmuthuselvan Pranesh (BGSW/PJ-MiDAS)", ""],
-    "uc-misra-assist-api": ["Poojitha Ramachandra (BGSW/PJ-MiDAS)", "Mallikarjun Puttallavar Akshay (BGSW/PJ-MiDAS)"],
-    "uc-duta-api": ["Poojitha Ramachandra (BGSW/PJ-MiDAS)", "Mallikarjun Puttallavar Akshay (BGSW/PJ-MiDAS)"],
-    "uc-code-review-api": ["Poojitha Ramachandra (BGSW/PJ-MiDAS)", ""],
-    "ss6-ask-midas": ["Mittal Swayam (BGSW/PJ-MiDAS)", "FIXED-TERM Singh Rajat (BGSW/PJ-ETA-B)"],
-    "uc-aspireai-api": ["Griesche Stefan (XC/ENA2)", "Rani Mysore Guruswamy (BGSW/PJ-MiDAS)"],
-    "uc-tla-api": ["Manjunathan Jayaseelan (MS/PJ-AI-NE2-XC)", ""],
-    "uc-cia-api": ["Kesavamoorthy Balasubramanian (MS/ECC-CF3-XC)", ""],
-    "uc-aoob": ["Poojitha Ramachandra (BGSW/PJ-MiDAS)", "Mallikarjun Puttallavar Akshay (BGSW/PJ-MiDAS)"],
-    "aoob-ui": ["Mallikarjun Puttallavar Akshay (BGSW/PJ-MiDAS)", ""],
-    "uc-esperant-ai-api": ["Goel Harshit (MS/EAC22-EM)", ""],
-    "uc-dar-api": ["Tiwari Aditya (MS/ENH32)", ""],
-    "uc-hsia-api": ["Poojitha Ramachandra (BGSW/PJ-MiDAS)", ""],
-    "uc-ditto-api": ["Hari Priya E (MS/ECQ3-XC)", ""],
-    "uc-swrs-ai-api": ["Aditya Sharma (BGSW/ERD1)", ""],
-    "ss9-midas-ui": ["Naveen Garla Surendra (BGSW/PJ-MiDAS)", "EXTERNAL Subbayana Koppal Swamy Anitha (Capgemini, BGSW/PJ-MiDAS)"],
-    "MiDAS-UI-Market-Place": ["Naveen Garla Surendra (BGSW/PJ-MiDAS)", "EXTERNAL Subbayana Koppal Swamy Anitha (Capgemini, BGSW/PJ-MiDAS)"],
-    "uc-mbd-remote-ui": ["Naveen Garla Surendra (BGSW/PJ-MiDAS)", "EXTERNAL Subbayana Koppal Swamy Anitha (Capgemini, BGSW/PJ-MiDAS)"],
-    "uc-tda-remote-ui": ["Mudka Nikhil (MS/EMT5-VM)", "Vignesh Natarajan (MS/ESY9-VM)"],
-    "uc-ps-tda-remote-ui": ["Mohapatra Aparajita (MS/ETB8-PS)", ""]
+    "repository-name-1": ["Responsible Person 1 (Department)", "Responsible Person 2 (Department)"],
+    "repository-name-2": ["Responsible Person 1 (Department)", ""],
+    "repository-name-3": ["Responsible Person 1 (Department)", "Responsible Person 2 (Department)"]
   }
 }
 ```
 
+**Configuration Fields Explained:**
+- `scan.output_dir`: Where reports are saved
+- `scan.default_mode`: Use "scoped" to scan only specified repositories, or "all" for all org repos
+- `scan.active_scope`: Which scope from the `scopes` section to use for scanning
+- `scopes`: Define release-specific repository groups
+- `responsibles`: Map repositories to responsible persons (shown in executive summary)
+
 #### Example `.env` (for secrets only):
 ```env
-GITHUB_TOKEN=your_github_token
-GITHUB_ENTERPRISE_URL=https://github.boschdevcloud.com/
-GITHUB_ORG=MiDAS
+GITHUB_TOKEN=your_github_token_here
+GITHUB_ENTERPRISE_URL=https://github.your-company.com
+GITHUB_ORG=your-organization-name
 ```
 
 **Never commit your `.env` file to version control.**

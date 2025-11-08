@@ -1,0 +1,29 @@
+{
+  "scan": {
+    "rate_limit": 5000,
+    "timeout": 30,
+    "max_repositories": 10,
+    "output_dir": "./reports",
+    "report_prefix": "security_reports",
+    "min_severity": "LOW",
+    "alert_states": ["open", "fixed", "dismissed"],
+    "default_mode": "scoped",
+    "active_scope": "10R1"
+  },
+  "scopes": {
+    "10R1": [
+      "repository-name-1",
+      "repository-name-2",
+      "repository-name-3"
+    ],
+    "Release_2": [
+      "another-repo-1",
+      "another-repo-2"
+    ]
+  },
+  "responsibles": {
+    "repository-name-1": ["Responsible Person 1 (Department)", "Responsible Person 2 (Department)"],
+    "repository-name-2": ["Responsible Person 1 (Department)", ""],
+    "repository-name-3": ["Responsible Person 1 (Department)", "Responsible Person 2 (Department)"]
+  }
+}
