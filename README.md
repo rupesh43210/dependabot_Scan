@@ -338,29 +338,39 @@ python update_open_issue_status.py
 # 1. Run security scan
 python security_pipeline.py scoped
 
-# 2. Close fixed issues
+# 2. Create/update issues from scan results
+python create_security_issues.py --auto
+
+# 3. Close fixed issues (after vulnerabilities are resolved)
 python close_fixed_issues.py --dry-run   # Preview first
 python close_fixed_issues.py             # Then execute
 
-# 3. If you notice any issues closed incorrectly, reopen them
+# 4. If you notice any issues closed incorrectly, reopen them
 python reopen_fixed.py --dry-run         # Preview first
 python reopen_fixed.py                   # Then execute
 
-# 4. Update project status for all open issues
+# 5. Update project status for all open issues (ensures consistency)
 python update_open_issue_status.py --dry-run   # Preview first
 python update_open_issue_status.py             # Then execute
 ```
 
 **Safety Features:**
-- Both scripts only process issues created by the automation (checks issue title and format)
-- Dry-run mode lets you preview changes before applying them
-- Scripts compare actual vulnerability state with issue content
-- Comments are added to provide audit trail
+- ✅ All scripts only process issues created by the automation (checks issue title format)
+- ✅ Dry-run mode lets you preview changes before applying them
+- ✅ Scripts compare actual vulnerability state with issue content
+- ✅ Comments are added to provide audit trail
+- ✅ No manual issues are affected by automation
 
 **GitHub Projects Integration:**
-- Closed issues → Status updated to "Done"
-- Reopened issues → Status updated to "In Progress" or "To Do"
-- Provides clear visual status in project boards
+- ✅ Closed issues → Status updated to "Done"
+- ✅ Reopened issues → Status updated to "In Progress" or "To Do"
+- ✅ Status updates persist even if issues are moved between columns
+- ✅ Provides clear visual status in project boards (Project #23 - OPL Management)
+
+**Supported Project Status Values:**
+- "In Progress", "In-Progress", "in progress" (for active work)
+- "To Do", "Todo", "to-do" (for new items)
+- "Done", "done" (for completed items)
 
 </details>
 
@@ -1032,10 +1042,12 @@ The repository includes comprehensive `.gitignore` protection for:
 
 ### Security Recommendations
 1. **Never commit tokens** - Always use `.env` files
-2. **Rotate tokens regularly** - Update GitHub tokens periodically
+2. **Rotate tokens regularly** - Update GitHub tokens every 90 days
 3. **Limit token permissions** - Use tokens with minimal required scopes
-4. **Review configurations** - Keep sensitive data out of config files
+4. **Review configurations** - Keep sensitive data out of `config.json`
 5. **Use virtual environments** - Isolate dependencies
+6. **Protect sensitive files** - Ensure `.env` and `config.json` are in `.gitignore`
+7. **Review token scopes** - Verify your token has only necessary permissions
 
 ## 🏷️ Label Management
 
@@ -1115,24 +1127,37 @@ GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 GITHUB_ORG=MiDAS
 
 # Optional: Advanced Configuration
-MAX_REPOSITORIES=50
-REQUEST_TIMEOUT=30
-RATE_LIMIT_BUFFER=100
+# MAX_REPOSITORIES=50
+# REQUEST_TIMEOUT=30
+# RATE_LIMIT_BUFFER=100
 ```
 
 **Token Requirements:**
-- `repo` scope - Access to repositories
-- `security_events` scope - Read Dependabot alerts
-- `project` scope - Assign to GitHub Projects (if using project assignment)
+- ✅ `repo` scope - Full access to repositories (required)
+- ✅ `read:org` scope - Read organization data (required for org scanning)
+- ✅ `security_events` scope - Read Dependabot security alerts (required)
+- ✅ `project` scope - Manage GitHub Projects v2 (required for project assignment)
+- ✅ `write:discussion` scope - Manage issue comments (required for lifecycle management)
 
 **Token Security:**
 ```bash
-# Test token validity
+# Test token validity (Public GitHub)
 curl -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/user
 
 # For Enterprise GitHub
-curl -H "Authorization: token $GITHUB_TOKEN" https://github.company.com/api/v3/user
+curl -H "Authorization: token $GITHUB_TOKEN" https://github.boschdevcloud.com/api/v3/user
+
+# Check token scopes
+curl -H "Authorization: token $GITHUB_TOKEN" -I https://api.github.com/user | grep X-OAuth-Scopes
 ```
+
+**Token Generation:**
+1. Go to GitHub Settings → Developer settings → Personal access tokens → Tokens (classic)
+2. Click "Generate new token (classic)"
+3. Select the required scopes listed above
+4. Set expiration (recommended: 90 days for security)
+5. Copy the token and add to your `.env` file
+6. **Never commit or share your token!**
 </details>
 
 <details>
@@ -1187,7 +1212,8 @@ python create_security_issues.py --auto --dry-run
 📦 dependabot_Scan/
 ├── 📄 README.md                     # This comprehensive guide
 ├── 📋 requirements.txt              # Python dependencies
-├── 🌍 .env                         # Environment variables (create from template)
+├── 🌍 .env                         # Environment variables (create from .env.sample)
+├── ⚙️ config.json                  # Your configuration (create from config.json.sample)
 ├── 📝 .gitignore                   # Git ignore rules for security
 │
 ├── 🔧 Core Tools/
@@ -1511,6 +1537,179 @@ python create_security_issues.py --auto --project "Emergency Response"
 - `scan` - Scan settings (output directory, scope, mode)
 - `scopes` - Repository groups for targeted scanning
 - `responsibles` - Repository ownership mapping
+
+---
+
+**🎯 Need Help?** Check the [troubleshooting section](#-troubleshooting) or review `config.json.sample` for examples!
+
+---
+
+## 🔍 Known Issues & Limitations
+
+### Current Limitations
+1. **GitHub Projects v2 Only** - The project assignment feature requires GitHub Projects v2 (Beta). Classic projects are not supported.
+2. **Label Color Format** - Colors must be specified without the `#` prefix (e.g., `fbca04` not `#fbca04`).
+3. **Single Organization** - The scanner works with one organization at a time. To scan multiple orgs, run separate instances.
+4. **Rate Limiting** - GitHub API rate limits apply. For large organizations (>100 repos), consider running scoped scans.
+
+### Known Workarounds
+- **Large Organizations**: Use scoped scanning mode to limit the number of repositories per scan
+- **Rate Limit Errors**: Add delays or reduce concurrent requests in configuration
+- **Project Access Issues**: Ensure your token has `project` scope and you're an organization member
+
+### Future Enhancements
+- [ ] Support for multiple organizations in a single scan
+- [ ] Automatic retry logic for rate limit errors
+- [ ] Integration with JIRA and other issue tracking systems
+- [ ] Email notifications for critical vulnerabilities
+- [ ] Historical trend analysis across multiple scans
+
+---
+
+## 📊 Metrics & Reporting
+
+### Key Performance Indicators (KPIs)
+The scanner tracks several important security metrics:
+
+- **Vulnerability Density**: Number of vulnerabilities per repository
+- **Severity Distribution**: Breakdown of Critical/High/Medium/Low severity issues
+- **Response Time**: Time from vulnerability detection to issue creation
+- **Resolution Rate**: Percentage of vulnerabilities fixed over time
+- **Repository Risk Score**: Calculated based on vulnerability count and severity
+
+### Report Types Generated
+
+1. **Detailed Vulnerabilities Report** (`detailed_vulnerabilities.csv`/`.xlsx`)
+   - Complete list of all vulnerabilities
+   - Package names, versions, and affected repositories
+   - CVSS scores and severity levels
+   - Status (Open/Fixed/Dismissed)
+   - Direct links to GitHub security alerts
+
+2. **Executive Summary** (`executive_summary.csv`/`.xlsx`)
+   - High-level view by repository
+   - Responsible persons (from `config.json`)
+   - Custom color-coding for severity levels
+   - Total vulnerability counts per repository
+
+3. **KPI Summary** (`executive_kpi_summary.csv`)
+   - Organization-wide statistics
+   - Top 10 most vulnerable repositories
+   - Severity breakdowns
+   - Scan metadata and timestamps
+
+4. **Human-Readable Summary** (`README.md`)
+   - Narrative summary of scan results
+   - Key findings and recommendations
+   - Quick reference for stakeholders
+
+---
+
+## 🚨 Emergency Response Workflow
+
+### Critical Vulnerability Detected
+
+If a **Critical** severity vulnerability is found:
+
+```bash
+# 1. Immediate scan to verify
+python security_pipeline.py scoped
+
+# 2. Create urgent issue
+python create_security_issues.py --auto --labels "critical,urgent,security"
+
+# 3. Notify security team (manual step)
+# - Tag responsible persons in the GitHub issue
+# - Send Slack/Teams notification
+# - Update security dashboard
+
+# 4. Track remediation
+# - Monitor issue status in Project #23
+# - Follow up on resolution progress
+# - Re-scan after fixes are deployed
+
+# 5. Verify fix and close
+python security_pipeline.py scoped
+python close_fixed_issues.py
+```
+
+### Bulk Vulnerability Response
+
+For organizations with many open vulnerabilities:
+
+```bash
+# 1. Prioritize critical and high severity
+python security_pipeline.py scoped
+
+# 2. Generate executive summary for management
+# Review reports/{scope}_security_reports_*/executive_summary.xlsx
+
+# 3. Create issues with priority labeling
+python create_security_issues.py --auto --labels "security-sprint,q4-2024"
+
+# 4. Track progress in GitHub Projects
+# View: https://github.boschdevcloud.com/orgs/MiDAS/projects/23
+
+# 5. Weekly status updates
+# - Re-scan weekly
+# - Update project board
+# - Close resolved issues
+python close_fixed_issues.py
+```
+
+---
+
+## 🎓 Best Practices
+
+### Scanning Frequency
+- **Production Repositories**: Daily or on every deployment
+- **Development Repositories**: Weekly
+- **Archived Repositories**: Monthly or quarterly
+
+### Issue Management
+1. **Label Consistently**: Use standardized labels across all repositories
+2. **Assign Owners**: Use `responsibles` in `config.json` to track ownership
+3. **Set Priorities**: Tag critical/high issues for immediate attention
+4. **Track Progress**: Leverage GitHub Projects for visual tracking
+5. **Close Promptly**: Use `close_fixed_issues.py` to keep issues current
+
+### Security Hygiene
+1. **Regular Scans**: Schedule automated scans (CI/CD or cron jobs)
+2. **Prompt Updates**: Address Critical and High vulnerabilities within 7 days
+3. **Documentation**: Keep `config.json` responsibles up to date
+4. **Review Reports**: Management should review executive summaries monthly
+5. **Audit Trail**: Maintain scan history for compliance purposes
+
+### Team Collaboration
+- **Assign Issues**: Tag responsible developers in GitHub issues
+- **Project Boards**: Use Project #23 for sprint planning
+- **Stand-ups**: Review open security issues in daily standups
+- **Retrospectives**: Discuss vulnerability trends in sprint retros
+
+---
+
+## 📝 Changelog
+
+### Version 2.1.0 (Current)
+- ✅ Fixed corrupted docstring in `security_pipeline.py`
+- ✅ Enhanced README with comprehensive documentation
+- ✅ Added token scope requirements and testing instructions
+- ✅ Documented issue lifecycle management scripts
+- ✅ Added emergency response workflow
+- ✅ Improved project structure documentation
+
+### Version 2.0.0
+- ✅ Added issue lifecycle management scripts
+- ✅ Fixed CSV column name bug in `close_fixed_issues.py`
+- ✅ Fixed label color consistency (#fbca04)
+- ✅ Added `add_to_project.py` for GitHub Projects integration
+- ✅ Enhanced security features and duplicate prevention
+
+### Version 1.0.0
+- ✅ Initial release with vulnerability scanning
+- ✅ GitHub issue creation
+- ✅ Report generation
+- ✅ Label management
 
 ---
 

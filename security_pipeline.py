@@ -8,15 +8,7 @@ compliance reporting, and comprehensive visualizations.
 
 Features:
 - Enhanced vulnerability scanning with lifecycle tracking
-- Advanced anal    # Get organization name (required)
-    org_name = os.getenv('GITHUB_ORG')
-    if not org_name:
-        print("❌ ERROR: GITHUB_ORG environment variable is required")
-        print("   Please set your GitHub organization name in .env file")
-        sys.exit(1)
-    
-    # Create and run pipeline
-    pipeline = SecurityPipeline(github_token, org_name) and trend analysis
+- Advanced analytics and trend analysis
 - Compliance reporting (OWASP Top 10, etc.)
 - Interactive risk matrices and dashboards
 - Executive and technical reporting
