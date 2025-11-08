@@ -159,9 +159,9 @@ GITHUB_ENTERPRISE_URL=https://github.your-company.com
 # Basic scan
 python security_pipeline.py
 
-# Scan specific repositories
-python manage_scopes.py  # Configure which repos to scan
-python security_pipeline.py
+# Scan specific repositories (scoped mode)
+# First, configure scopes in config.json, then:
+python security_pipeline.py scoped
 
 # What you get:
 # ├── reports/security_reports_YYYYMMDD_HHMMSS/
@@ -397,34 +397,6 @@ GITHUB_ORG=your-organization-name
 ```
 </details>
 
-<details>
-<summary>⚙️ <strong>Configuration Management</strong></summary>
-
-**View Current Configuration:**
-```bash
-python config_manager.py
-```
-
-**Generate Example Configurations:**
-```bash
-python config_examples.py
-```
-
-**Test Configuration Loading:**
-```bash
-python config_manager.py --validate
-```
-
-**Override Configuration:**
-```bash
-# Use custom config file
-python create_security_issues.py --auto --config my_team_config.json
-
-# Override specific settings
-python create_security_issues.py --auto --project "Emergency Response" --labels "p0,critical,urgent"
-```
-</details>
-
 ### 🎯 Repository Scoping
 
 Control which repositories to scan:
@@ -432,31 +404,34 @@ Control which repositories to scan:
 <details>
 <summary>📋 <strong>Repository Scope Configuration</strong></summary>
 
-**Interactive Scope Management:**
-```bash
-python manage_scopes.py
-```
-
-**Manual Configuration (`repo_scopes.json`):**
+**Configure Scopes in `config.json`:**
 ```json
 {
-  "included_repositories": [
-    "critical-app-1",
-    "payment-service",
-    "user-management"
-  ],
-  "excluded_repositories": [
-    "test-repo",
-    "archived-project",
-    "demo-app"
-  ]
+  "scan": {
+    "default_mode": "scoped",
+    "active_scope": "10R1"
+  },
+  "scopes": {
+    "10R1": [
+      "critical-app-1",
+      "payment-service",
+      "user-management"
+    ],
+    "Release_2": [
+      "app4",
+      "app5"
+    ]
+  }
 }
 ```
 
 **Scope Examples:**
 ```bash
-# Scan only specific repositories
-python security_pipeline.py --repos "app1,app2,app3"
+# Scan using the active scope defined in config.json
+python security_pipeline.py scoped
+
+# Scan all repositories in the organization
+python security_pipeline.py
 
 # Exclude test repositories
 python security_pipeline.py --exclude "*-test,*-demo"
@@ -845,18 +820,22 @@ dependabot_Scan/
 ├── 📄 README.md                     # This file
 ├── 🔧 security_pipeline.py          # Main vulnerability scanner
 ├── 🎯 create_security_issues.py     # Standalone issue creator
-├── ⚙️ config_manager.py            # Configuration management
 ├── 📋 github_issue_manager.py       # GitHub API integration
+├── 🎯 graphql_assign_issues.py      # GraphQL project assignment
 ├── 📊 security_report_generator.py  # Report generation
 ├── 🔍 vulnerability_scanner.py      # Vulnerability scanning logic
-├── 📝 issue_config.json            # Issue creation configuration
-├── 🌍 .env                         # Environment variables (create from .env.example)
-├── 📦 requirements.txt             # Python dependencies
-├── 📖 CONFIG_GUIDE.md              # Detailed configuration guide
+├── � setup_env.py                  # Interactive environment setup
+├── ⚙️ config.json.sample            # Configuration template
+├── 🔒 .env.sample                   # Environment variables template
+├── 🌍 .env                          # Your secrets (DO NOT COMMIT)
+├── ⚙️ config.json                   # Your configuration (DO NOT COMMIT)
+├── 📦 requirements.txt              # Python dependencies
 ├── reports/                        # Generated reports directory
-│   └── security_reports_*/
+│   └── {scope}_security_reports_*/
 │       ├── detailed_vulnerabilities.csv
+│       ├── detailed_vulnerabilities.xlsx
 │       ├── executive_summary.csv
+│       ├── executive_summary.xlsx   # With custom colors & responsibles
 │       └── executive_kpi_summary.csv
 └── venv/                          # Virtual environment (auto-created)
 ```
@@ -869,11 +848,6 @@ dependabot_Scan/
 python security_pipeline.py
 python create_security_issues.py --auto
 
-# View current configuration
-python config_manager.py
-
-# Generate configuration examples
-python config_examples.py
 ```
 
 ### Advanced Usage
@@ -1116,31 +1090,24 @@ python create_security_issues.py --auto --dry-run
 │   └── security_report_generator.py # 📊 Report generation system
 │
 ├── ⚙️ Configuration/
-│   ├── config_manager.py           # 📋 Configuration management
-│   ├── issue_config.json           # 🏷️ Issue creation settings
-│   ├── config_examples.py          # 📚 Generate example configs
-│   └── CONFIG_GUIDE.md             # 📖 Detailed configuration guide
+│   ├── config.json.sample          # 📋 Configuration template
+│   └── .env.sample                 # � Environment variables template
 │
 ├── 🔗 GitHub Integration/
 │   ├── github_issue_manager.py     # 📋 GitHub API integration
-│   ├── graphql_assign_issues.py    # 🎯 Project assignment via GraphQL
-│   └── repository_scope_manager.py # 📂 Repository scoping
+│   └── graphql_assign_issues.py    # 🎯 Project assignment via GraphQL
 │
 ├── 🛠️ Utilities/
-│   ├── setup_env.py                # 🚀 Interactive environment setup
-│   └── manage_scopes.py            # 📋 Repository scope management
+│   └── setup_env.py                # 🚀 Interactive environment setup
 │
 ├── 📊 Reports/ (Generated)
-│   └── security_reports_YYYYMMDD_HHMMSS/
+│   └── {scope}_security_reports_YYYYMMDD_HHMMSS/
 │       ├── detailed_vulnerabilities.csv
+│       ├── detailed_vulnerabilities.xlsx
 │       ├── executive_summary.csv
+│       ├── executive_summary.xlsx (with custom colors & responsible columns)
 │       ├── executive_kpi_summary.csv
 │       └── README.md
-│
-├── 📚 Examples/ (Auto-generated)
-│   ├── color_config_example.json    # 🎨 Color configuration example
-│   ├── custom_config_example.json   # ⚙️ Custom team configuration
-│   └── minimal_config_example.json  # 🎯 Minimal configuration
 │
 └── 🐍 Virtual Environment/
     └── venv/                        # Python virtual environment
@@ -1183,11 +1150,11 @@ echo $GITHUB_ENTERPRISE_URL
 
 **Issue: Configuration Not Loading**
 ```bash
-# Test configuration loading
-python config_manager.py
+# Validate config.json syntax
+python -m json.tool config.json
 
-# Validate JSON syntax
-python -m json.tool issue_config.json
+# Verify .env file exists and has correct variables
+cat .env
 ```
 
 **Issue: Label Creation Failed**
