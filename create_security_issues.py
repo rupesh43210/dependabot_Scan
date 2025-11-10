@@ -25,7 +25,6 @@ import subprocess
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 from datetime import datetime
-from dotenv import load_dotenv
 
 # Check if virtual environment is activated, if not create and activate it
 def ensure_venv():
@@ -97,6 +96,8 @@ def ensure_venv():
 # Ensure venv is activated
 ensure_venv()
 
+# Now import modules that require dependencies
+from dotenv import load_dotenv
 import pandas as pd
 
 # Add current directory to path for imports
@@ -158,8 +159,9 @@ class StandaloneIssueCreator:
         if not reports_path.exists():
             return None
         
-        # Look for the most recent report directory
-        report_dirs = [d for d in reports_path.iterdir() if d.is_dir() and d.name.startswith('security_reports_')]
+        # Look for the most recent report directory (handles both with and without scope prefix)
+        # Examples: security_reports_20241108_101004 or 10R1_security_reports_20241108_101004
+        report_dirs = [d for d in reports_path.iterdir() if d.is_dir() and 'security_reports' in d.name]
         
         if not report_dirs:
             return None
