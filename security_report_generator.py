@@ -17,6 +17,7 @@ Author: GitHub Copilot
 Version: 2.1.0
 """
 
+import os
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
@@ -40,8 +41,11 @@ class SecurityReportGenerator:
     RESPONSIBLE_MAP = None
 
     @staticmethod
-    def load_config(config_path="dependabot_Scan/config.json"):
+    def load_config(config_path="config.json"):
         try:
+            # If relative path, make it relative to script directory
+            if not os.path.isabs(config_path):
+                config_path = os.path.join(os.path.dirname(__file__), config_path)
             with open(config_path, "r", encoding="utf-8") as f:
                 config = json.load(f)
             return config
@@ -61,7 +65,7 @@ class SecurityReportGenerator:
             self._scopes = config.get('scopes', {})
         return self._scopes
 
-    def load_responsibles_from_config(self, config_path="dependabot_Scan/config.json"):
+    def load_responsibles_from_config(self, config_path="config.json"):
         config = self.load_config(config_path)
         return config.get("responsibles", {})
 
@@ -856,12 +860,21 @@ class SecurityReportGenerator:
             )
             header_alignment = Alignment(horizontal='center', vertical='center')
             
+            # Define border style
+            thin_border = Border(
+                left=Side(style='thin'),
+                right=Side(style='thin'),
+                top=Side(style='thin'),
+                bottom=Side(style='thin')
+            )
+            
             # Apply header formatting
             for col_num in range(1, len(dataframe.columns) + 1):
                 cell = worksheet.cell(row=1, column=col_num)
                 cell.font = header_font
                 cell.fill = header_fill
                 cell.alignment = header_alignment
+                cell.border = thin_border
             
             # Enhanced formatting for different report types
             if report_type == 'enhanced':
@@ -873,33 +886,52 @@ class SecurityReportGenerator:
             elif report_type == 'detailed':
                 self._apply_detailed_formatting(worksheet, dataframe)
             
+            # Apply borders and alignment to all data cells
+            for row_num in range(1, len(dataframe) + 2):
+                for col_num in range(1, len(dataframe.columns) + 1):
+                    cell = worksheet.cell(row=row_num, column=col_num)
+                    cell.border = thin_border
+                    # Center align numeric cells (except header)
+                    if row_num > 1:
+                        if isinstance(cell.value, (int, float)):
+                            cell.alignment = Alignment(horizontal='center', vertical='center')
+                        else:
+                            cell.alignment = Alignment(horizontal='left', vertical='center', wrap_text=True)
+            
             # Auto-adjust column widths
-            for col_idx, column in enumerate(worksheet.columns):
-                column_letter = get_column_letter(col_idx + 1)
-                column_name = dataframe.columns[col_idx] if col_idx < len(dataframe.columns) else ""
+            for col_idx, column in enumerate(worksheet.columns, 1):
+                column_letter = get_column_letter(col_idx)
+                column_name = dataframe.columns[col_idx - 1] if col_idx <= len(dataframe.columns) else ""
                 
-                # Calculate column width
+                # Calculate column width based on content
                 max_length = 0
                 for cell in column:
                     try:
-                        if len(str(cell.value)) > max_length:
-                            max_length = len(str(cell.value))
+                        cell_value = str(cell.value) if cell.value is not None else ""
+                        if len(cell_value) > max_length:
+                            max_length = len(cell_value)
                     except:
                         pass
                 
                 # Set width based on column type and content
                 if 'description' in column_name.lower():
-                    width = 120
-                elif 'details' in column_name.lower():
-                    width = 80
+                    width = 60  # Reduced for better readability
+                elif 'details' in column_name.lower() or 'summary' in column_name.lower():
+                    width = 50
+                elif 'repository' in column_name.lower() or 'responsible' in column_name.lower():
+                    width = max(25, min(max_length + 2, 40))
                 elif 'status' in column_name.lower():
+                    width = 12
+                elif 'date' in column_name.lower():
                     width = 15
-                elif 'value' in column_name.lower():
-                    width = 20
                 else:
-                    width = min(max(max_length + 2, 12), 50)
+                    width = max(12, min(max_length + 3, 25))
                 
                 worksheet.column_dimensions[column_letter].width = width
+            
+            # Auto-adjust row heights for better readability
+            for row in range(1, len(dataframe) + 2):
+                worksheet.row_dimensions[row].height = 20 if row == 1 else 18
                 
         except ImportError:
             print("⚠️  openpyxl not available for advanced formatting")
