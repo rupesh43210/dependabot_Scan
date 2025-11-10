@@ -25,7 +25,6 @@ import argparse
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, List
-from dotenv import load_dotenv
 
 # Check if virtual environment is activated, if not create and activate it
 def ensure_venv():
@@ -97,6 +96,8 @@ def ensure_venv():
 # Ensure venv is activated
 ensure_venv()
 
+# Now import modules that require dependencies
+from dotenv import load_dotenv
 from vulnerability_scanner import VulnerabilityScanner
 from security_report_generator import SecurityReportGenerator
 import json
@@ -105,7 +106,10 @@ import json
 class ScopeManager:
     """Simple scope manager that reads from config.json"""
     
-    def __init__(self, config_file="dependabot_Scan/config.json"):
+    def __init__(self, config_file="config.json"):
+        # If relative path, make it relative to script directory
+        if not os.path.isabs(config_file):
+            config_file = os.path.join(os.path.dirname(__file__), config_file)
         self.config_file = config_file
         self.config = self._load_config()
     
