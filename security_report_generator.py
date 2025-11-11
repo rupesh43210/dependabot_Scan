@@ -138,6 +138,7 @@ class SecurityReportGenerator:
         self.trends = {}
         self.scoped_repositories = scoped_repositories or []
         self.active_scope = active_scope
+        self.repository_metadata = {}  # Store default branch info for all repos
         
         # Load output directory from config
         self.output_dir = self._load_output_dir_from_config()
@@ -149,6 +150,29 @@ class SecurityReportGenerator:
             return config.get('scan', {}).get('output_dir', './reports')
         except Exception:
             return './reports'
+    
+    def load_repository_metadata(self, metadata_file: str) -> bool:
+        """
+        Load repository metadata (default branches) from JSON file.
+        
+        Args:
+            metadata_file: Path to repository metadata JSON file
+            
+        Returns:
+            True if metadata loaded successfully
+        """
+        try:
+            if os.path.exists(metadata_file):
+                with open(metadata_file, 'r') as f:
+                    self.repository_metadata = json.load(f)
+                print(f"✅ Loaded metadata for {len(self.repository_metadata)} repositories")
+                return True
+            else:
+                print(f"ℹ️  Metadata file not found: {metadata_file}")
+                return False
+        except Exception as e:
+            print(f"⚠️  Error loading repository metadata: {e}")
+            return False
     
     def load_vulnerability_data(self, data_source: str) -> bool:
         """
@@ -434,6 +458,7 @@ class SecurityReportGenerator:
                 for repo in self.scoped_repositories:
                     repo_summary.append({
                         'Repository Name': repo,
+                        'Scanned Branch': 'N/A',
                         'Risk Score': 0,
                         'Total Open': 0,
                         'Critical': 0,
@@ -482,6 +507,22 @@ class SecurityReportGenerator:
         for repo in repositories_to_include:
             repo_vulns = open_vulns[open_vulns['repository'] == repo] if not open_vulns.empty else pd.DataFrame()
             responsible1, responsible2 = self.get_responsible(repo)
+            
+            # Get scanned branch for this repository
+            # First try from vulnerability data, then from metadata
+            all_repo_vulns = self.data[self.data['repository'] == repo] if not self.data.empty else pd.DataFrame()
+            scanned_branch = 'N/A'
+            
+            # Try to get from vulnerability data first
+            if not all_repo_vulns.empty and 'scanned_branch' in all_repo_vulns.columns:
+                branch_values = all_repo_vulns['scanned_branch'].dropna().unique()
+                if len(branch_values) > 0:
+                    scanned_branch = branch_values[0]  # Take the first non-null value
+            
+            # If not found in vuln data, check metadata (for repos with no vulnerabilities)
+            if scanned_branch == 'N/A' and repo in self.repository_metadata:
+                scanned_branch = self.repository_metadata[repo].get('default_branch', 'N/A')
+            
             if not repo_vulns.empty:
                 repo_vulns['severity'] = repo_vulns['severity'].str.upper()
                 severity_counts = repo_vulns['severity'].value_counts()
@@ -491,11 +532,11 @@ class SecurityReportGenerator:
                     severity_counts.get(severity, 0) * weight
                     for severity, weight in self.SEVERITY_WEIGHTS.items()
                 )
-                all_repo_vulns = self.data[self.data['repository'] == repo]
                 resolved_vulns = all_repo_vulns[all_repo_vulns['alert_state'].isin(['fixed', 'dismissed'])]
                 avg_resolution_days = resolved_vulns['days_to_resolution'].mean() if 'days_to_resolution' in resolved_vulns.columns and len(resolved_vulns) > 0 else None
                 repo_summary.append({
                     'Repository Name': repo,
+                    'Scanned Branch': scanned_branch,
                     'Responsible1': responsible1,
                     'Responsible2': responsible2,
                     'Risk Score': risk_score,
@@ -510,11 +551,11 @@ class SecurityReportGenerator:
                     'Oldest Open (Days)': repo_vulns['vulnerability_age_days'].max() if len(repo_vulns) > 0 and 'vulnerability_age_days' in repo_vulns.columns else 'N/A'
                 })
             else:
-                all_repo_vulns = self.data[self.data['repository'] == repo] if not self.data.empty else pd.DataFrame()
                 resolved_vulns = all_repo_vulns[all_repo_vulns['alert_state'].isin(['fixed', 'dismissed'])] if not all_repo_vulns.empty else pd.DataFrame()
                 avg_resolution_days = resolved_vulns['days_to_resolution'].mean() if 'days_to_resolution' in resolved_vulns.columns and len(resolved_vulns) > 0 else None
                 repo_summary.append({
                     'Repository Name': repo,
+                    'Scanned Branch': scanned_branch,
                     'Responsible1': responsible1,
                     'Responsible2': responsible2,
                     'Risk Score': 0,
@@ -729,6 +770,7 @@ class SecurityReportGenerator:
         # Select and rename columns for the detailed report
         detailed_columns = {
             'repository': 'Repository Name',
+            'scanned_branch': 'Scanned Branch',
             'alert_state': 'Status',
             'current_status': 'Detailed Status',
             'severity': 'Severity',

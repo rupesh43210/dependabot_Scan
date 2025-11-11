@@ -198,13 +198,13 @@ class SecurityPipeline:
         if not vulnerabilities:
             print("✅ No vulnerabilities found - all repositories are secure!")
             # Create empty report files for consistency
-            json_file, csv_file = self.scanner.save_results([], self.timestamp)
-            self.temp_files.extend([json_file, csv_file])
+            json_file, csv_file, metadata_file = self.scanner.save_results([], self.timestamp)
+            self.temp_files.extend([json_file, csv_file, metadata_file])
             return True
         
         # Save scan results
-        json_file, csv_file = self.scanner.save_results(vulnerabilities, self.timestamp)
-        self.temp_files.extend([json_file, csv_file])
+        json_file, csv_file, metadata_file = self.scanner.save_results(vulnerabilities, self.timestamp)
+        self.temp_files.extend([json_file, csv_file, metadata_file])
         
         # Save vulnerability summary
         summary_file = f"temp_vulnerability_summary_{self.timestamp}.json"
@@ -294,6 +294,10 @@ class SecurityPipeline:
         if not self.report_generator.load_vulnerability_data(json_file):
             print("❌ Failed to load vulnerability data for reporting")
             return None
+        
+        # Load repository metadata (default branches)
+        metadata_file = f"temp_repo_metadata_{self.timestamp}.json"
+        self.report_generator.load_repository_metadata(metadata_file)
         
         # Generate all reports using enhanced generator
         try:

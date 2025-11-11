@@ -1,15 +1,18 @@
-# 🛡️ Security Vulnerability Scanner & GitHub Issue Creator
+# 🛡️ Security Vulnerability Scanner & GitHub Issue Manager
 
-A comprehensive tool for scanning GitHub repositories for Dependabot security vulnerabilities and automatically creating organized GitHub issues for tracking and resolution.
+A comprehensive automation tool for scanning GitHub repositories for Dependabot security vulnerabilities, generating detailed reports with branch tracking, and automatically managing GitHub issues for vulnerability resolution.
 
 [![Python Version](https://img.shields.io/badge/Python-3.8%2B-blue)](https://python.org)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![GitHub](https://img.shields.io/badge/GitHub-Enterprise%20Ready-orange)](https://github.com)
 
+> **Latest Update (Nov 2025)**: Added **Scanned Branch tracking** to all reports, ensuring transparency about which branch was scanned and preventing confusion when default branches change
+
 ---
 
 ## 📑 Table of Contents
 
+- [🆕 What's New](#-whats-new)
 - [🚀 Features](#-features)
 - [🏁 Quick Start](#-quick-start)
 - [📦 Installation](#-installation)
@@ -25,6 +28,36 @@ A comprehensive tool for scanning GitHub repositories for Dependabot security vu
 - [🔐 Security & Best Practices](#-security--best-practices)
 - [🆘 Troubleshooting](#-troubleshooting)
 - [🤝 Contributing](#-contributing)
+
+---
+
+## 🆕 What's New
+
+### November 2025 - Scanned Branch Tracking
+
+**New Feature:** All reports now include the **Scanned Branch** column to show which branch was scanned for each repository.
+
+#### Why This Matters
+- 🎯 **Prevents Confusion**: If someone changes a repository's default branch, you'll immediately see it in the reports
+- 📊 **Audit Trail**: Historical reports show exactly which branch was scanned at that time
+- 🔍 **Transparency**: Teams can verify they're looking at the correct branch's vulnerabilities
+- 🐛 **Easier Debugging**: Quickly identify if vulnerability changes are due to branch switches
+
+#### What Changed
+- ✅ **Detailed Vulnerabilities Report**: New "Scanned Branch" column (2nd column)
+- ✅ **Executive Summary Report**: New "Scanned Branch" column (3rd column)
+- ✅ **Console Output**: Shows `📍 Default branch: develop` during scanning
+- ✅ **All Repositories**: Works for repos with OR without vulnerabilities
+
+#### Example Output
+```csv
+Repository Name,     Scanned Branch,  Status,  Severity, ...
+uc-dar-api,          develop,         OPEN,    HIGH,     ...
+ss9-midas-ui,        develop,         OPEN,    MEDIUM,   ...
+MiDAS-Platform,      dev,             FIXED,   CRITICAL, ...
+```
+
+**No changes needed to your workflow!** The scanned branch information is automatically included in all future scans.
 
 ---
 
@@ -47,6 +80,7 @@ A comprehensive tool for scanning GitHub repositories for Dependabot security vu
 - 🏷️ **Dynamic labeling** - Automatically create labels if they don't exist
 - 📋 **Project integration** - Auto-assign issues to GitHub Projects
 - 🔒 **Enterprise ready** - Support for GitHub Enterprise Server
+- 🌿 **Branch tracking** - Track which branch was scanned (prevents confusion when default branches change)
 
 ---
 
@@ -660,7 +694,7 @@ reports/
 **Report Contents:**
 
 **Detailed Vulnerabilities (`detailed_vulnerabilities.csv`):**
-- Repository name and URL
+- Repository name and **scanned branch** 🆕
 - Package name and version
 - Vulnerability severity (Critical, High, Medium, Low)
 - CVSS score and vector
@@ -670,7 +704,7 @@ reports/
 - GitHub alert URL
 
 **Executive Summary (`executive_summary.csv`):**
-- Repository name
+- Repository name and **scanned branch** 🆕
 - Total vulnerability count by severity
 - Risk assessment score
 - Recommendations
