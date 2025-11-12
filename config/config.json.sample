@@ -4,6 +4,8 @@
     "timeout": 30,
     "max_repositories": 10,
     "output_dir": "./reports",
+    "dependabot_output_dir": "./reports/dependabot_alerts",
+    "codeql_output_dir": "./reports/codeql_alerts",
     "report_prefix": "security_reports",
     "min_severity": "LOW",
     "alert_states": ["open", "fixed", "dismissed"],

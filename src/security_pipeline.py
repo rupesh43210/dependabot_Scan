@@ -15,7 +15,7 @@ Features:
 - Security KPIs and performance scorecards
 
 Author: GitHub Copilot
-Version: 2.1.0
+Version: 2.2.0 (Optimized)
 """
 
 import os
@@ -26,12 +26,23 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional, List
 
+# Add parent directory to path for module imports
+sys.path.insert(0, str(Path(__file__).parent))
+
+# Import modular components
+from scanners.vulnerability_scanner import VulnerabilityScanner
+from reporters.security_report_generator import SecurityReportGenerator
+from utils.config_loader import load_config, validate_config, get_active_scope, get_scope_repositories
+from utils.logger import setup_logger
+
 # Check if virtual environment is activated, if not create and activate it
 def ensure_venv():
     """Ensure virtual environment is activated, create if it doesn't exist."""
     if not hasattr(sys, 'real_prefix') and not (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix):
         # Not in virtual environment
-        venv_path = Path(__file__).parent / "venv"
+        # Get project root (parent of src/)
+        project_root = Path(__file__).parent.parent
+        venv_path = project_root / "venv"
         
         if not venv_path.exists():
             print("📦 Virtual environment not found. Creating new venv...")
@@ -54,7 +65,7 @@ def ensure_venv():
             print("🔄 Activating virtual environment...")
             
             # Check if requirements need to be installed
-            requirements_file = Path(__file__).parent / "requirements.txt"
+            requirements_file = project_root / "requirements.txt"
             if requirements_file.exists():
                 # Check if dependencies are already installed
                 try:
@@ -93,23 +104,24 @@ def ensure_venv():
     
     return True
 
-# Ensure venv is activated
-ensure_venv()
+# Only ensure venv if running as main script (not when imported as module)
+if __name__ != "__main__" and len(sys.argv) > 0 and sys.argv[0].endswith('security_pipeline.py'):
+    ensure_venv()
 
-# Now import modules that require dependencies
+# Now import modules that require dependencies  
 from dotenv import load_dotenv
-from vulnerability_scanner import VulnerabilityScanner
-from security_report_generator import SecurityReportGenerator
 import json
 
 
 class ScopeManager:
-    """Simple scope manager that reads from config.json"""
+    """Simple scope manager that reads from config/config.json"""
     
-    def __init__(self, config_file="config.json"):
-        # If relative path, make it relative to script directory
+    def __init__(self, config_file="config/config.json"):
+        # If relative path, make it relative to project root (parent of src/)
         if not os.path.isabs(config_file):
-            config_file = os.path.join(os.path.dirname(__file__), config_file)
+            # Get project root (parent directory of src/)
+            project_root = os.path.dirname(os.path.dirname(__file__))
+            config_file = os.path.join(project_root, config_file)
         self.config_file = config_file
         self.config = self._load_config()
     

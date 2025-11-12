@@ -1,12 +1,14 @@
 # 🛡️ Security Vulnerability Scanner & GitHub Issue Manager
 
-A comprehensive automation tool for scanning GitHub repositories for Dependabot security vulnerabilities, generating detailed reports with branch tracking, and automatically managing GitHub issues for vulnerability resolution.
+A comprehensive automation tool for scanning GitHub repositories for **Dependabot security vulnerabilities** and **Code Scanning alerts**, generating detailed reports with branch tracking, and automatically managing GitHub issues for vulnerability resolution.
 
 [![Python Version](https://img.shields.io/badge/Python-3.8%2B-blue)](https://python.org)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![GitHub](https://img.shields.io/badge/GitHub-Enterprise%20Ready-orange)](https://github.com)
 
-> **Latest Update (Nov 2025)**: Added **Scanned Branch tracking** to all reports, ensuring transparency about which branch was scanned and preventing confusion when default branches change
+> **Latest Updates**: 
+> - 🆕 **Code Scanning Module** (Nov 2024): NEW separate module for scanning and reporting Code Scanning alerts (SAST findings from CodeQL, Snyk, etc.)
+> - ✅ **Scanned Branch Tracking** (Nov 2024): All reports include which branch was scanned, preventing confusion when default branches change
 
 ---
 
@@ -14,8 +16,11 @@ A comprehensive automation tool for scanning GitHub repositories for Dependabot 
 
 - [🆕 What's New](#-whats-new)
 - [🚀 Features](#-features)
-- [🏁 Quick Start](#-quick-start)
 - [📦 Installation](#-installation)
+- [🎯 Module Overview](#-module-overview)
+  - [Dependabot Scanner](#dependabot-scanner)
+  - [Code Scanning Scanner](#code-scanning-scanner-new)
+- [🏁 Quick Start](#-quick-start)
 - [🎯 Usage Scenarios](#-usage-scenarios)
   - [Scenario 1: Scan Only](#scenario-1-scan-only)
   - [Scenario 2: Issue Creation Only](#scenario-2-issue-creation-only)
@@ -33,9 +38,30 @@ A comprehensive automation tool for scanning GitHub repositories for Dependabot 
 
 ## 🆕 What's New
 
-### November 2025 - Scanned Branch Tracking
+### November 2024 - Code Scanning Module 🆕
 
-**New Feature:** All reports now include the **Scanned Branch** column to show which branch was scanned for each repository.
+**New Module:** Separate scanner for **GitHub Code Scanning alerts** (SAST findings from CodeQL, Snyk, SonarQube, etc.)
+
+#### What This Adds
+- 🔍 **Code-Level Security**: Scan for security issues in your source code (SQL injection, XSS, hardcoded secrets, etc.)
+- 📊 **Separate Reports**: Code Scanning reports in dedicated `code_scanning_reports/` folder
+- 🎯 **Same Structure**: Familiar report format matching Dependabot scanner
+- 🌿 **Branch Tracking**: Includes "Scanned Branch" column like Dependabot reports
+- 🔄 **Independent Module**: Run separately or alongside Dependabot scans
+
+#### Quick Start
+```powershell
+# Run Code Scanning scanner
+python code_scanning_pipeline.py --scope "10R1"
+```
+
+📖 **Full Documentation**: See [CODE_SCANNING_README.md](CODE_SCANNING_README.md)
+
+---
+
+### November 2024 - Scanned Branch Tracking
+
+**Feature:** All reports now include the **Scanned Branch** column to show which branch was scanned for each repository.
 
 #### Why This Matters
 - 🎯 **Prevents Confusion**: If someone changes a repository's default branch, you'll immediately see it in the reports
@@ -48,6 +74,7 @@ A comprehensive automation tool for scanning GitHub repositories for Dependabot 
 - ✅ **Executive Summary Report**: New "Scanned Branch" column (3rd column)
 - ✅ **Console Output**: Shows `📍 Default branch: develop` during scanning
 - ✅ **All Repositories**: Works for repos with OR without vulnerabilities
+- ✅ **Both Modules**: Available in Dependabot AND Code Scanning reports
 
 #### Example Output
 ```csv
@@ -65,6 +92,7 @@ MiDAS-Platform,      dev,             FIXED,   CRITICAL, ...
 
 ### Core Capabilities
 - ✅ **Automated vulnerability scanning** across multiple repositories
+- ✅ **Dual scanning modes**: Dependabot vulnerabilities + Code Scanning alerts
 - ✅ **Automatic GitHub issue creation** with detailed vulnerability information
 - ✅ **Flexible configuration system** for labels, projects, and formatting
 - ✅ **Project assignment integration** with GitHub Projects (Beta)
@@ -81,34 +109,17 @@ MiDAS-Platform,      dev,             FIXED,   CRITICAL, ...
 - 📋 **Project integration** - Auto-assign issues to GitHub Projects
 - 🔒 **Enterprise ready** - Support for GitHub Enterprise Server
 - 🌿 **Branch tracking** - Track which branch was scanned (prevents confusion when default branches change)
-
----
-
-## 🏁 Quick Start
-
-### ⚡ Super Quick (2 minutes)
-```bash
-# 1. Clone and navigate
-git clone https://github.com/rupesh43210/dependabot_Scan.git
-cd dependabot_Scan
-
-# 2. Setup environment (interactive)
-python setup_env.py
-
-# 3. Run complete workflow
-python security_pipeline.py && python create_security_issues.py --auto
-```
-
-### 🎯 Choose Your Path
-| Use Case | Command | Description |
-|----------|---------|-------------|
-| **Scan Only** | `python security_pipeline.py` | Generate vulnerability reports |
-| **Issues Only** | `python create_security_issues.py --auto` | Create issues from existing reports |
-| **Complete Flow** | Both commands | Full vulnerability assessment + issue creation |
+- 🆕 **Separate modules** - Run Dependabot and Code Scanning independently
 
 ---
 
 ## 📦 Installation
+
+### Prerequisites
+- Python 3.8 or higher
+- GitHub Personal Access Token with appropriate permissions:
+  - `repo` (full repository access)
+  - `security_events` (for Code Scanning alerts)
 
 ### Method 1: Automatic Setup (Recommended)
 ```bash
@@ -118,8 +129,125 @@ python setup_env.py
 
 ### Method 2: Manual Setup
 ```bash
-# Create virtual environment
-python -m venv venv
+# Install dependencies
+pip install -r requirements.txt
+
+# Copy and configure
+cp config.json.sample config.json
+# Edit config.json with your settings
+```
+
+---
+
+## 🎯 Module Overview
+
+This project provides **two independent scanning modules** that can be run separately or together:
+
+### Dependabot Scanner
+
+**Purpose**: Scan for vulnerable dependencies in your projects
+
+**What it scans**:
+- Outdated packages with known CVEs
+- Direct and transitive dependencies
+- Package vulnerabilities across multiple ecosystems (npm, pip, Maven, etc.)
+
+**Module files**:
+- `vulnerability_scanner.py` - Scans Dependabot alerts
+- `security_report_generator.py` - Generates reports
+- `security_pipeline.py` - Orchestrates workflow
+
+**Reports location**: `reports/`
+
+**Run command**:
+```powershell
+python security_pipeline.py --scope "10R1"
+```
+
+### Code Scanning Scanner 🆕
+
+**Purpose**: Scan for security issues in source code (SAST)
+
+**What it scans**:
+- SQL injection vulnerabilities
+- Cross-site scripting (XSS)
+- Hardcoded secrets and credentials
+- Buffer overflows and memory issues
+- Security misconfigurations
+- Other code-level security flaws
+
+**Tools supported**:
+- GitHub CodeQL
+- Snyk Code
+- SonarQube
+- Other SAST tools integrated with GitHub
+
+**Module files**:
+- `code_scanning_scanner.py` - Scans Code Scanning alerts
+- `code_scanning_report_generator.py` - Generates reports
+- `code_scanning_pipeline.py` - Orchestrates workflow
+
+**Reports location**: `code_scanning_reports/`
+
+**Run command**:
+```powershell
+python code_scanning_pipeline.py --scope "10R1"
+```
+
+**Full documentation**: [CODE_SCANNING_README.md](CODE_SCANNING_README.md)
+
+### When to Use Which Module?
+
+| Scenario | Module to Use |
+|----------|---------------|
+| Check for vulnerable npm/pip packages | **Dependabot Scanner** |
+| Find SQL injection in your code | **Code Scanning Scanner** |
+| Update outdated dependencies | **Dependabot Scanner** |
+| Detect hardcoded secrets | **Code Scanning Scanner** |
+| Fix CVEs in third-party libraries | **Dependabot Scanner** |
+| Find XSS vulnerabilities in code | **Code Scanning Scanner** |
+| Complete security assessment | **Both modules** |
+
+---
+
+## 🏁 Quick Start
+
+### ⚡ Super Quick (2 minutes)
+
+#### Dependabot Scanning
+```powershell
+# 1. Setup (one-time)
+python setup_env.py
+
+# 2. Scan for dependency vulnerabilities
+python security_pipeline.py --scope "10R1"
+
+# 3. (Optional) Create GitHub issues
+python create_security_issues.py --auto
+```
+
+#### Code Scanning �
+```powershell
+# 1. Same setup as above
+
+# 2. Scan for code-level security issues
+python code_scanning_pipeline.py --scope "10R1"
+```
+
+### �🎯 Choose Your Path
+
+#### For Dependency Vulnerabilities (Dependabot)
+| Use Case | Command | Description |
+|----------|---------|-------------|
+| **Scan Only** | `python security_pipeline.py` | Generate Dependabot reports |
+| **Issues Only** | `python create_security_issues.py --auto` | Create issues from existing reports |
+| **Complete Flow** | Both commands | Full vulnerability assessment + issue creation |
+
+#### For Code Security Issues (SAST) 🆕
+| Use Case | Command | Description |
+|----------|---------|-------------|
+| **Code Scan** | `python code_scanning_pipeline.py` | Generate Code Scanning reports |
+| **Both Scans** | Run both pipelines | Complete security coverage |
 
 # Activate virtual environment
 # Windows:

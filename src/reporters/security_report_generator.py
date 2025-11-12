@@ -41,11 +41,13 @@ class SecurityReportGenerator:
     RESPONSIBLE_MAP = None
 
     @staticmethod
-    def load_config(config_path="config.json"):
+    def load_config(config_path="config/config.json"):
         try:
-            # If relative path, make it relative to script directory
+            # If relative path, make it relative to project root (2 levels up from reporters/)
             if not os.path.isabs(config_path):
-                config_path = os.path.join(os.path.dirname(__file__), config_path)
+                # Get project root: src/reporters -> src -> root
+                project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+                config_path = os.path.join(project_root, config_path)
             with open(config_path, "r", encoding="utf-8") as f:
                 config = json.load(f)
             return config
@@ -147,9 +149,11 @@ class SecurityReportGenerator:
         """Load output directory from config.json."""
         try:
             config = self.load_config()
-            return config.get('scan', {}).get('output_dir', './reports')
+            # Use dependabot_output_dir if available, otherwise fall back to output_dir
+            return config.get('scan', {}).get('dependabot_output_dir', 
+                   config.get('scan', {}).get('output_dir', './reports/dependabot_alerts'))
         except Exception:
-            return './reports'
+            return './reports/dependabot_alerts'
     
     def load_repository_metadata(self, metadata_file: str) -> bool:
         """
