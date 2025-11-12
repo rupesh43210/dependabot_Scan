@@ -39,6 +39,42 @@ class CodeScanningReportGenerator:
         'NOTE': 1
     }
     
+    # Responsible person mapping (loaded from config)
+    RESPONSIBLE_MAP = None
+    
+    @staticmethod
+    def load_config(config_path="config/config.json"):
+        """Load configuration from config.json."""
+        try:
+            if not os.path.isabs(config_path):
+                # Get project root: src/reporters -> src -> root
+                project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+                config_path = os.path.join(project_root, config_path)
+            with open(config_path, "r", encoding="utf-8") as f:
+                config = json.load(f)
+            return config
+        except Exception as e:
+            print(f"⚠️  Could not load config: {e}")
+            return {}
+    
+    def load_responsibles_from_config(self, config_path="config/config.json"):
+        """Load responsible persons mapping from config."""
+        config = self.load_config(config_path)
+        return config.get("responsibles", {})
+    
+    def get_responsible(self, repo):
+        """Get responsible persons for a repository."""
+        if self.RESPONSIBLE_MAP is None:
+            self.RESPONSIBLE_MAP = self.load_responsibles_from_config()
+        vals = self.RESPONSIBLE_MAP.get(repo, ["", ""])
+        if isinstance(vals, tuple):
+            return vals
+        if isinstance(vals, list) and len(vals) == 2:
+            return tuple(vals)
+        if isinstance(vals, list) and len(vals) == 1:
+            return (vals[0], "")
+        return ("", "")
+    
     def __init__(self, scoped_repositories: Optional[List[str]] = None, active_scope: Optional[str] = None):
         """
         Initialize the report generator.
@@ -143,9 +179,12 @@ class CodeScanningReportGenerator:
                 repo_summary = []
                 for repo in self.scoped_repositories:
                     scanned_branch = self.repository_metadata.get(repo, {}).get('default_branch', 'N/A')
+                    responsible1, responsible2 = self.get_responsible(repo)
                     repo_summary.append({
                         'Repository Name': repo,
                         'Scanned Branch': scanned_branch,
+                        'Responsible1': responsible1,
+                        'Responsible2': responsible2,
                         'Risk Score': 0,
                         'Total Open': 0,
                         'Critical': 0,
@@ -222,9 +261,12 @@ class CodeScanningReportGenerator:
                 fixed_alerts = all_repo_alerts[all_repo_alerts['alert_state'] == 'fixed']
                 dismissed_alerts = all_repo_alerts[all_repo_alerts['alert_state'] == 'dismissed']
                 
+                responsible1, responsible2 = self.get_responsible(repo)
                 repo_summary.append({
                     'Repository Name': repo,
                     'Scanned Branch': scanned_branch,
+                    'Responsible1': responsible1,
+                    'Responsible2': responsible2,
                     'Risk Score': risk_score,
                     'Total Open': len(repo_alerts),
                     'Critical': severity_counts.get('CRITICAL', 0),
@@ -243,9 +285,12 @@ class CodeScanningReportGenerator:
                 all_fixed = all_repo_alerts[all_repo_alerts['alert_state'] == 'fixed'] if not all_repo_alerts.empty else pd.DataFrame()
                 all_dismissed = all_repo_alerts[all_repo_alerts['alert_state'] == 'dismissed'] if not all_repo_alerts.empty else pd.DataFrame()
                 
+                responsible1, responsible2 = self.get_responsible(repo)
                 repo_summary.append({
                     'Repository Name': repo,
                     'Scanned Branch': scanned_branch,
+                    'Responsible1': responsible1,
+                    'Responsible2': responsible2,
                     'Risk Score': 0,
                     'Total Open': 0,
                     'Critical': 0,
