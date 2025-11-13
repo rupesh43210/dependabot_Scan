@@ -67,7 +67,7 @@ class SecurityReportGenerator:
             self._scopes = config.get('scopes', {})
         return self._scopes
 
-    def load_responsibles_from_config(self, config_path="config.json"):
+    def load_responsibles_from_config(self, config_path="config/config.json"):
         config = self.load_config(config_path)
         return config.get("responsibles", {})
 
